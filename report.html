@@ -1,0 +1,462 @@
+<!DOCTYPE html>
+<html lang="id" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Laporan EDA — Auto EDA Insight</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=Syne:wght@700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/static/css/theme.css">
+
+<script>
+  (function(){
+    try{var t=localStorage.getItem('eda-theme');if(t)document.documentElement.setAttribute('data-theme',t);}catch(_){}
+  }());
+</script>
+
+<style>
+  *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+
+  body {
+    background:  var(--color-bg);
+    color:       var(--color-text-primary);
+    font-family: 'Space Grotesk', sans-serif;
+    min-height:  100vh;
+    transition:  background .25s, color .25s;
+  }
+
+  /* ── Ambient background ────────────────────────────────── */
+  .bg-mesh {
+    position: fixed; inset: 0; z-index: 0; pointer-events: none;
+    background:
+      radial-gradient(ellipse 70% 40% at 85% 10%, var(--color-mesh-a) 0%, transparent 55%),
+      radial-gradient(ellipse 50% 50% at 10% 90%, var(--color-mesh-b) 0%, transparent 55%),
+      var(--color-bg);
+    transition: background .25s;
+  }
+  .grid-overlay {
+    position: fixed; inset: 0; z-index: 0; pointer-events: none;
+    background-image:
+      linear-gradient(var(--color-grid) 1px, transparent 1px),
+      linear-gradient(90deg, var(--color-grid) 1px, transparent 1px);
+    background-size: 60px 60px;
+  }
+
+  /* ── Navigation bar ────────────────────────────────────── */
+  nav {
+    position:        relative;
+    z-index:         10;
+    display:         flex;
+    align-items:     center;
+    justify-content: space-between;
+    padding:         16px 32px;
+    border-bottom:   1px solid var(--color-border-soft);
+    backdrop-filter: blur(10px);
+    background:      var(--color-bg-glass);
+    transition:      background .25s, border-color .25s;
+  }
+  .nav-logo { display: flex; align-items: center; gap: 10px; text-decoration: none; }
+  .nav-icon {
+    width:         34px; height: 34px;
+    background:    linear-gradient(135deg, var(--color-accent), var(--color-accent-dark));
+    border-radius: 8px;
+    display:       flex; align-items: center; justify-content: center;
+  }
+  .nav-icon svg { width: 16px; height: 16px; stroke: white; fill: none; stroke-width: 2; }
+  .nav-brand { font-family: 'Syne', sans-serif; font-weight: 800; color: var(--color-accent); font-size: 1rem; }
+
+  .nav-actions { display: flex; align-items: center; gap: 8px; }
+
+  .back-link {
+    color:           var(--color-accent);
+    text-decoration: none;
+    font-size:       .88rem;
+    display:         inline-flex;
+    align-items:     center;
+    gap:             6px;
+    padding:         7px 14px;
+    border-radius:   8px;
+    border:          1px solid var(--color-accent-border-soft);
+    background:      var(--color-accent-softer);
+    transition:      background .2s, border-color .2s;
+  }
+  .back-link:hover { background: var(--color-accent-soft); border-color: var(--color-accent-border); }
+  .back-link svg   { width: 15px; height: 15px; stroke: currentColor; fill: none; stroke-width: 2; }
+
+  /* ── Page container ────────────────────────────────────── */
+  .container {
+    position:   relative;
+    z-index:    1;
+    max-width:  960px;
+    margin:     0 auto;
+    padding:    36px 24px 60px;
+  }
+
+  /* ── Page header ───────────────────────────────────────── */
+  .page-header { margin-bottom: 28px; }
+
+  h1 {
+    font-size:   1.8rem;
+    color:       var(--color-accent);
+    margin-bottom: 4px;
+    font-family: 'Syne', sans-serif;
+  }
+  .subtitle {
+    color:     var(--color-text-secondary);
+    font-size: .9rem;
+    min-height: 22px;
+  }
+
+  /* ── Export buttons ────────────────────────────────────── */
+  .btn-row { display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 32px; }
+
+  .btn {
+    padding:       11px 24px;
+    border:        none;
+    border-radius: 10px;
+    font-weight:   600;
+    cursor:        pointer;
+    font-size:     .88rem;
+    text-decoration: none;
+    display:       inline-flex;
+    align-items:   center;
+    gap:           7px;
+    transition:    transform .2s, opacity .2s, box-shadow .2s;
+    font-family:   'Space Grotesk', sans-serif;
+  }
+  .btn:hover { transform: translateY(-2px); opacity: .9; }
+  .btn svg   { width: 16px; height: 16px; stroke: currentColor; fill: none; stroke-width: 2; }
+
+  /* PDF — red */
+  .btn-pdf {
+    background: linear-gradient(135deg, var(--color-danger), #b91c1c);
+    color:      #fff;
+    box-shadow: 0 2px 10px var(--color-danger-bg);
+  }
+  .btn-pdf:hover { box-shadow: 0 4px 16px var(--color-danger-bg); }
+
+  /* Excel — green */
+  .btn-excel {
+    background: linear-gradient(135deg, var(--color-success), #15803d);
+    color:      #fff;
+    box-shadow: 0 2px 10px var(--color-success-bg);
+  }
+  .btn-excel:hover { box-shadow: 0 4px 16px var(--color-success-bg); }
+
+  /* CSV — amber */
+  .btn-csv {
+    background: linear-gradient(135deg, var(--color-warning), #b45309);
+    color:      #fff;
+    box-shadow: 0 2px 10px var(--color-warning-bg);
+  }
+  .btn-csv:hover { box-shadow: 0 4px 16px var(--color-warning-bg); }
+
+  /* ── Report sections ───────────────────────────────────── */
+  .section {
+    background:    var(--color-bg-card);
+    border:        1px solid var(--color-border);
+    border-radius: 14px;
+    padding:       24px;
+    margin-bottom: 24px;
+    box-shadow:    var(--shadow-sm);
+    transition:    background .25s, border-color .25s, box-shadow .25s;
+  }
+  [data-theme="light"] .section {
+    background: var(--color-bg-surface);
+    box-shadow: var(--shadow-md);
+  }
+
+  .section h2 {
+    color:          var(--color-accent);
+    font-size:      1.05rem;
+    margin-bottom:  16px;
+    border-bottom:  1px solid var(--color-border-soft);
+    padding-bottom: 8px;
+    font-family:    'Syne', sans-serif;
+  }
+
+  /* ── Tables ────────────────────────────────────────────── */
+  .table-wrap { overflow-x: auto; }
+
+  table { width: 100%; border-collapse: collapse; font-size: .85rem; }
+
+  thead th {
+    background:  var(--color-accent-soft);
+    color:       var(--color-accent);
+    padding:     8px 12px;
+    text-align:  left;
+    font-weight: 600;
+    white-space: nowrap;
+    position:    sticky;
+    top:         0;
+  }
+  tbody td {
+    padding:       8px 12px;
+    border-bottom: 1px solid var(--color-border-soft);
+    color:         var(--color-text-primary);
+    transition:    background .15s;
+  }
+  tbody tr:hover td { background: var(--color-accent-softer); }
+
+  /* Empty state inside sections */
+  .empty-msg {
+    color:    var(--color-text-muted);
+    padding:  12px 0;
+    font-size: .88rem;
+  }
+
+  /* ── Stat grid ─────────────────────────────────────────── */
+  .stat-grid {
+    display:               grid;
+    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+    gap:                   12px;
+  }
+  .stat-card {
+    background:    var(--color-accent-soft);
+    border:        1px solid var(--color-border-soft);
+    border-radius: 10px;
+    padding:       18px 16px;
+    text-align:    center;
+    transition:    background .25s, border-color .25s;
+  }
+  [data-theme="light"] .stat-card {
+    background: var(--color-bg-raised);
+    border-color: var(--color-border);
+  }
+  .stat-card .val {
+    font-size:   1.5rem;
+    font-weight: 700;
+    color:       var(--color-accent);
+    font-family: 'Syne', sans-serif;
+  }
+  .stat-card .lbl {
+    font-size:  .78rem;
+    color:      var(--color-text-muted);
+    margin-top: 4px;
+  }
+
+  /* ── Insight items ─────────────────────────────────────── */
+  .insight-item {
+    padding:       14px 16px;
+    background:    var(--color-accent-softer);
+    border-left:   3px solid var(--color-accent);
+    border-radius: 6px;
+    margin-bottom: 10px;
+    transition:    background .25s, border-color .25s;
+  }
+  [data-theme="light"] .insight-item {
+    background:  var(--color-bg-raised);
+    border-color: var(--color-accent);
+  }
+  .insight-item:last-child { margin-bottom: 0; }
+
+  .insight-title {
+    font-weight:   600;
+    font-size:     .92rem;
+    color:         var(--color-accent);
+    margin-bottom: 4px;
+  }
+  .insight-text {
+    font-size:   .86rem;
+    color:       var(--color-text-secondary);
+    line-height: 1.6;
+  }
+
+  /* Insight type variants */
+  .insight-item.success { border-left-color: var(--color-success); }
+  .insight-item.success .insight-title { color: var(--color-success); }
+
+  .insight-item.warning { border-left-color: var(--color-warning); }
+  .insight-item.warning .insight-title { color: var(--color-warning); }
+
+  .insight-item.danger  { border-left-color: var(--color-danger); }
+  .insight-item.danger  .insight-title { color: var(--color-danger); }
+
+  /* ── Loading state ─────────────────────────────────────── */
+  #loading {
+    text-align: center;
+    padding:    60px;
+    color:      var(--color-text-muted);
+    font-size:  1.1rem;
+  }
+
+  /* ── Responsive ────────────────────────────────────────── */
+  @media (max-width: 600px) {
+    nav         { padding: 14px 20px; }
+    .container  { padding: 24px 16px 48px; }
+    h1          { font-size: 1.4rem; }
+    .btn        { padding: 9px 18px; font-size: .82rem; }
+  }
+</style>
+</head>
+<body>
+<div class="bg-mesh"></div>
+<div class="grid-overlay"></div>
+
+<!-- Navigation -->
+<nav>
+  <a class="nav-logo" href="/">
+    <div class="nav-icon">
+      <svg viewBox="0 0 24 24"><path d="M3 3v18h18"/><path d="M7 16l4-4 4 4 4-8"/></svg>
+    </div>
+    <span class="nav-brand">Auto EDA Insight</span>
+  </a>
+  <div class="nav-actions">
+    <a class="back-link" href="/dashboard">
+      <svg viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"/></svg>
+      Kembali ke Dashboard
+    </a>
+
+    <!-- Theme Toggle -->
+    <button class="theme-toggle" id="themeToggleBtn" title="Toggle Light/Dark Mode" aria-label="Toggle theme">
+      <svg class="icon-moon" viewBox="0 0 24 24"><path d="M21 12.79A9 9 0 1 1 11.21 3a7 7 0 0 0 9.79 9.79z"/></svg>
+      <svg class="icon-sun"  viewBox="0 0 24 24"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
+    </button>
+  </div>
+</nav>
+
+<div class="container">
+  <div class="page-header">
+    <h1>Laporan EDA Otomatis</h1>
+    <p class="subtitle" id="subtitle">Memuat data...</p>
+  </div>
+
+  <div class="btn-row">
+    <a class="btn btn-pdf" href="/api/export/pdf" download="eda_report.pdf">
+      <svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+      Download PDF
+    </a>
+    <a class="btn btn-excel" href="/api/export/excel" download="eda_report.xlsx">
+      <svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="9" y1="21" x2="9" y2="9"/></svg>
+      Export Excel
+    </a>
+    <a class="btn btn-csv" href="/api/export/csv" download="eda_report_csv_bundle.zip">
+      <svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+      Export CSV
+    </a>
+  </div>
+
+  <div id="loading">Memuat laporan...</div>
+
+  <div id="reportContent" style="display:none">
+
+    <div class="section" id="summarySection">
+      <h2>Ringkasan Dataset</h2>
+      <div class="stat-grid" id="statGrid"></div>
+    </div>
+
+    <div class="section" id="numSection">
+      <h2>Statistik Deskriptif — Numerik</h2>
+      <div class="table-wrap"><table id="numTable"><thead></thead><tbody></tbody></table></div>
+    </div>
+
+    <div class="section" id="catSection">
+      <h2>Statistik Deskriptif — Kategorik</h2>
+      <div class="table-wrap"><table id="catTable"><thead></thead><tbody></tbody></table></div>
+    </div>
+
+    <div class="section" id="insightSection">
+      <h2>Insight Otomatis</h2>
+      <div id="insightList"></div>
+    </div>
+
+  </div>
+</div>
+
+<script src="/static/js/theme.js"></script>
+<script>
+  // Auth check
+  fetch('/api/auth/me').then(r => r.json()).then(d => {
+    if (!d.logged_in) window.location.href = '/login';
+  });
+
+  // Theme toggle
+  // Theme toggle handled by theme.js (bound via .theme-toggle class)
+
+  // Insight type → CSS class mapping
+  const insightTypeClass = { success: 'success', warning: 'warning', danger: 'danger', info: '' };
+
+  async function loadReport() {
+    try {
+      const [statsRes, insRes, prevRes] = await Promise.all([
+        fetch('/api/statistics'),
+        fetch('/api/insights'),
+        fetch('/api/preview?rows=1')
+      ]);
+      const stats   = await statsRes.json();
+      const ins     = await insRes.json();
+      const preview = await prevRes.json();
+
+      if (!stats.success) {
+        document.getElementById('loading').textContent = 'Error: ' + stats.error;
+        return;
+      }
+
+      document.getElementById('loading').style.display       = 'none';
+      document.getElementById('reportContent').style.display = 'block';
+
+      // Summary
+      if (preview.success) {
+        const info = preview.info;
+        document.getElementById('subtitle').textContent =
+          `File: ${info.filename} | ${info.rows} baris × ${info.columns} kolom`;
+        document.getElementById('statGrid').innerHTML = `
+          <div class="stat-card"><div class="val">${info.rows.toLocaleString()}</div><div class="lbl">Total Baris</div></div>
+          <div class="stat-card"><div class="val">${info.columns}</div><div class="lbl">Total Kolom</div></div>
+          <div class="stat-card"><div class="val">${info.size_kb} KB</div><div class="lbl">Ukuran File</div></div>
+        `;
+      }
+
+      // Numerical table
+      if (stats.numerical && stats.numerical.length) {
+        const keys   = ['column','count','mean','median','min','max','std','variance','mode','skewness','kurtosis','missing_count','missing_pct','normality','outliers'];
+        const labels = ['Kolom','Count','Mean','Median','Min','Max','Std Dev','Variance','Mode','Skewness','Kurtosis','Missing','Missing%','Normalitas','Outliers'];
+        document.getElementById('numTable').querySelector('thead').innerHTML =
+          '<tr>' + labels.map(l => `<th>${l}</th>`).join('') + '</tr>';
+        document.getElementById('numTable').querySelector('tbody').innerHTML =
+          stats.numerical.map(r =>
+            '<tr>' + keys.map(k => `<td>${r[k] ?? '—'}</td>`).join('') + '</tr>'
+          ).join('');
+      } else {
+        document.getElementById('numSection').insertAdjacentHTML(
+          'beforeend', '<p class="empty-msg">Tidak ada variabel numerik.</p>'
+        );
+      }
+
+      // Categorical table
+      if (stats.categorical && stats.categorical.length) {
+        const keys   = ['column','count','unique','mode','mode_freq','mode_pct','missing_count','missing_pct'];
+        const labels = ['Kolom','Count','Unique','Mode','Mode Freq','Mode %','Missing','Missing%'];
+        document.getElementById('catTable').querySelector('thead').innerHTML =
+          '<tr>' + labels.map(l => `<th>${l}</th>`).join('') + '</tr>';
+        document.getElementById('catTable').querySelector('tbody').innerHTML =
+          stats.categorical.map(r =>
+            '<tr>' + keys.map(k => `<td>${r[k] ?? '—'}</td>`).join('') + '</tr>'
+          ).join('');
+      } else {
+        document.getElementById('catSection').insertAdjacentHTML(
+          'beforeend', '<p class="empty-msg">Tidak ada variabel kategorik.</p>'
+        );
+      }
+
+      // Insights
+      if (ins.success && ins.insights) {
+        document.getElementById('insightList').innerHTML = ins.insights.map(i => {
+          const tp  = i.type || 'info';
+          const cls = insightTypeClass[tp] || '';
+          return `<div class="insight-item ${cls}">
+            <div class="insight-title">${i.title || ''}</div>
+            <div class="insight-text">${i.text || i}</div>
+          </div>`;
+        }).join('');
+      }
+
+    } catch (e) {
+      document.getElementById('loading').textContent = 'Error: ' + e.message;
+    }
+  }
+
+  loadReport();
+</script>
+</body>
+</html>

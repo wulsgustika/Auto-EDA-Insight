@@ -1,0 +1,787 @@
+<!DOCTYPE html>
+<html lang="id" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Profil — Auto EDA Insight</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=Syne:wght@700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/static/css/theme.css">
+
+<!-- Apply saved theme before paint to prevent flash -->
+<script>
+  (function(){
+    try{var t=localStorage.getItem('eda-theme');if(t)document.documentElement.setAttribute('data-theme',t);}catch(_){}
+  }());
+</script>
+
+<style>
+  /* ── Reset ──────────────────────────────────────────────── */
+  *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+
+  body {
+    background:  var(--color-bg);
+    color:       var(--color-text-primary);
+    font-family: 'Space Grotesk', sans-serif;
+    min-height:  100vh;
+    transition:  background .25s, color .25s;
+  }
+
+  /* ── Ambient background mesh ───────────────────────────── */
+  .bg-mesh {
+    position: fixed; inset: 0; z-index: 0; pointer-events: none;
+    background:
+      radial-gradient(ellipse 80% 50% at 20% 20%, var(--color-mesh-a) 0%, transparent 60%),
+      radial-gradient(ellipse 60% 60% at 80% 80%, var(--color-mesh-b) 0%, transparent 60%),
+      var(--color-bg);
+    transition: background .25s;
+  }
+  .grid-overlay {
+    position: fixed; inset: 0; z-index: 0; pointer-events: none;
+    background-image:
+      linear-gradient(var(--color-grid) 1px, transparent 1px),
+      linear-gradient(90deg, var(--color-grid) 1px, transparent 1px);
+    background-size: 60px 60px;
+    transition: background-image .25s;
+  }
+
+  /* ── Navigation ─────────────────────────────────────────── */
+  nav {
+    position:        relative;
+    z-index:         10;
+    display:         flex;
+    align-items:     center;
+    justify-content: space-between;
+    padding:         18px 40px;
+    border-bottom:   1px solid var(--color-border-soft);
+    backdrop-filter: blur(10px);
+    background:      var(--color-bg-glass);
+    transition:      background .25s, border-color .25s;
+  }
+  .nav-logo { display: flex; align-items: center; gap: 10px; text-decoration: none; }
+  .nav-icon-box {
+    width: 36px; height: 36px;
+    background:    linear-gradient(135deg, var(--color-accent), var(--color-accent-dark));
+    border-radius: 9px;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .nav-icon-box svg { width: 18px; height: 18px; stroke: white; fill: none; stroke-width: 2; }
+  .nav-brand { font-family: 'Syne', sans-serif; font-weight: 800; color: var(--color-accent); font-size: 1.1rem; }
+
+  .nav-links { display: flex; gap: 8px; align-items: center; }
+  .nav-link {
+    color:           var(--color-text-secondary);
+    text-decoration: none;
+    font-size:       .88rem;
+    padding:         7px 14px;
+    border-radius:   8px;
+    transition:      background .2s, color .2s;
+  }
+  .nav-link:hover, .nav-link.active {
+    background: var(--color-accent-soft);
+    color:      var(--color-accent);
+  }
+  .btn-logout {
+    background:    var(--color-danger-bg);
+    border:        1px solid var(--color-danger-border);
+    color:         var(--color-danger-text);
+    padding:       7px 16px;
+    border-radius: 8px;
+    font-size:     .85rem;
+    cursor:        pointer;
+    font-family:   'Space Grotesk', sans-serif;
+    transition:    background .2s, color .2s;
+  }
+  .btn-logout:hover { background: var(--color-danger-border); }
+
+  /* ── Page layout ─────────────────────────────────────────── */
+  .container { position: relative; z-index: 1; max-width: 860px; margin: 0 auto; padding: 48px 24px; }
+
+  .page-header { margin-bottom: 36px; }
+  .page-header h1 {
+    font-size:   1.9rem;
+    font-family: 'Syne', sans-serif;
+    color:       var(--color-text-primary);
+  }
+  .page-header p { color: var(--color-text-muted); margin-top: 6px; }
+
+  /* ── Profile Hero Card ───────────────────────────────────── */
+  .profile-hero {
+    background:    var(--color-bg-card);
+    border:        1px solid var(--color-border);
+    border-radius: 20px;
+    padding:       36px;
+    display:       flex;
+    gap:           28px;
+    align-items:   center;
+    margin-bottom: 28px;
+    position:      relative;
+    box-shadow:    var(--shadow-sm);
+    transition:    background .25s, border-color .25s, box-shadow .25s;
+  }
+
+  /* Light mode: subtle gradient accent strip */
+  [data-theme="light"] .profile-hero {
+    background: linear-gradient(135deg, var(--color-bg-surface) 70%, rgba(2,132,199,0.04) 100%);
+    box-shadow: var(--shadow-md);
+  }
+
+  .avatar-wrap { position: relative; flex-shrink: 0; }
+  .avatar {
+    width:         90px;
+    height:        90px;
+    background:    linear-gradient(135deg, var(--color-accent), var(--color-accent-dark));
+    border-radius: 50%;
+    display:       flex;
+    align-items:   center;
+    justify-content: center;
+    font-size:     2rem;
+    font-weight:   700;
+    color:         white;
+    box-shadow:    var(--shadow-glow);
+    overflow:      hidden;
+  }
+  .avatar img { width: 100%; height: 100%; object-fit: cover; }
+
+  .avatar-edit-btn {
+    position:      absolute;
+    bottom:        0; right: 0;
+    width:         28px; height: 28px;
+    background:    var(--color-accent);
+    border-radius: 50%;
+    border:        2px solid var(--color-bg);
+    cursor:        pointer;
+    display:       flex;
+    align-items:   center;
+    justify-content: center;
+    transition:    background .2s;
+  }
+  .avatar-edit-btn:hover { background: var(--color-accent-dark); }
+  .avatar-edit-btn svg { width: 13px; height: 13px; stroke: white; fill: none; stroke-width: 2.5; }
+
+  .profile-info h2 {
+    font-size:   1.5rem;
+    font-family: 'Syne', sans-serif;
+    color:       var(--color-text-primary);
+  }
+  .profile-info .username-tag { color: var(--color-accent); font-size: .95rem; margin-top: 4px; }
+  .profile-info .email        { color: var(--color-text-muted); font-size: .88rem; margin-top: 4px; }
+
+  /* ── Stat Cards ──────────────────────────────────────────── */
+  .stat-grid {
+    display:               grid;
+    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+    gap:                   16px;
+    margin-bottom:         28px;
+  }
+  .stat-card {
+    background:    var(--color-bg-card);
+    border:        1px solid var(--color-border);
+    border-radius: 14px;
+    padding:       22px;
+    text-align:    center;
+    box-shadow:    var(--shadow-sm);
+    transition:    background .25s, border-color .25s, box-shadow .25s, transform .2s;
+  }
+  .stat-card:hover { transform: translateY(-2px); box-shadow: var(--shadow-md); }
+  [data-theme="light"] .stat-card { background: var(--color-bg-surface); }
+
+  .stat-card .stat-icon svg {
+    width:        24px; height: 24px;
+    stroke:       var(--color-accent);
+    fill:         none;
+    stroke-width: 1.8;
+    margin-bottom: 8px;
+    opacity: .75;
+  }
+  .stat-card .val {
+    font-size:   1.6rem;
+    font-weight: 700;
+    color:       var(--color-accent);
+    font-family: 'Syne', sans-serif;
+  }
+  .stat-card .lbl { font-size: .8rem; color: var(--color-text-muted); margin-top: 4px; }
+
+  /* ── Tabs ────────────────────────────────────────────────── */
+  .tabs {
+    display:       flex;
+    gap:           4px;
+    margin-bottom: 20px;
+    background:    var(--color-bg-card);
+    border:        1px solid var(--color-border-soft);
+    border-radius: 12px;
+    padding:       4px;
+    width:         fit-content;
+    transition:    background .25s, border-color .25s;
+  }
+  .tab-btn {
+    padding:       8px 18px;
+    border-radius: 8px;
+    font-size:     .88rem;
+    font-weight:   500;
+    cursor:        pointer;
+    border:        none;
+    background:    transparent;
+    color:         var(--color-text-muted);
+    font-family:   'Space Grotesk', sans-serif;
+    transition:    background .2s, color .2s, border-color .2s;
+  }
+  .tab-btn.active {
+    background: var(--color-accent-soft);
+    color:      var(--color-accent);
+    border:     1px solid var(--color-accent-border);
+  }
+  .tab-btn:hover:not(.active) { color: var(--color-text-secondary); background: var(--color-accent-softer); }
+
+  .tab-content         { display: none; }
+  .tab-content.active  { display: block; }
+
+  /* ── Detail / Edit Cards ─────────────────────────────────── */
+  .detail-card, .edit-card {
+    background:    var(--color-bg-card);
+    border:        1px solid var(--color-border);
+    border-radius: 16px;
+    padding:       28px;
+    margin-bottom: 20px;
+    box-shadow:    var(--shadow-sm);
+    transition:    background .25s, border-color .25s, box-shadow .25s;
+  }
+  [data-theme="light"] .detail-card,
+  [data-theme="light"] .edit-card { background: var(--color-bg-surface); box-shadow: var(--shadow-md); }
+
+  .detail-card h3, .edit-card h3 {
+    color:          var(--color-accent);
+    font-size:      1rem;
+    margin-bottom:  20px;
+    border-bottom:  1px solid var(--color-border-soft);
+    padding-bottom: 10px;
+  }
+
+  .detail-row {
+    display:         flex;
+    justify-content: space-between;
+    align-items:     center;
+    padding:         12px 0;
+    border-bottom:   1px solid var(--color-border-soft);
+  }
+  .detail-row:last-child { border-bottom: none; }
+  .detail-row .lbl { color: var(--color-text-muted); font-size: .88rem; }
+  .detail-row .val { color: var(--color-text-primary); font-size: .92rem; font-weight: 500; }
+
+  /* ── Form Controls ───────────────────────────────────────── */
+  .form-group         { margin-bottom: 18px; }
+  .form-group label   { display: block; font-size: .85rem; color: var(--color-text-secondary); margin-bottom: 6px; }
+
+  .form-input {
+    width:         100%;
+    background:    var(--color-bg-input);
+    border:        1px solid var(--color-border);
+    color:         var(--color-text-primary);
+    padding:       10px 14px;
+    border-radius: 10px;
+    font-family:   'Space Grotesk', sans-serif;
+    font-size:     .92rem;
+    outline:       none;
+    transition:    border-color .2s, background .2s, box-shadow .2s;
+  }
+  .form-input:focus {
+    border-color: var(--color-accent);
+    background:   var(--color-bg-input-focus);
+    box-shadow:   0 0 0 3px var(--color-accent-soft);
+  }
+  .form-input::placeholder { color: var(--color-text-faint); }
+  .form-input:disabled     { opacity: .45; cursor: not-allowed; }
+
+  .form-hint  { font-size: .78rem; color: var(--color-accent); margin-top: 5px; opacity: .7; }
+  .form-row   { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  @media (max-width: 560px) { .form-row { grid-template-columns: 1fr; } }
+
+  /* ── Alerts ──────────────────────────────────────────────── */
+  .alert {
+    padding:       12px 16px;
+    border-radius: 10px;
+    font-size:     .88rem;
+    margin-bottom: 16px;
+    display:       none;
+    border-left:   4px solid transparent;
+  }
+  .alert.success {
+    background:   var(--color-success-bg);
+    border-color: var(--color-success);
+    color:        var(--color-success-text);
+    display:      block;
+  }
+  .alert.error {
+    background:   var(--color-danger-bg);
+    border-color: var(--color-danger);
+    color:        var(--color-danger-text);
+    display:      block;
+  }
+
+  /* ── Buttons ─────────────────────────────────────────────── */
+  .btn-row { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 8px; }
+  .btn {
+    padding:         10px 22px;
+    border-radius:   10px;
+    font-family:     'Space Grotesk', sans-serif;
+    font-size:       .9rem;
+    font-weight:     600;
+    cursor:          pointer;
+    text-decoration: none;
+    display:         inline-flex;
+    align-items:     center;
+    gap:             7px;
+    transition:      transform .2s, opacity .2s, box-shadow .2s;
+    border:          none;
+  }
+  .btn:hover { transform: translateY(-2px); opacity: .92; }
+  .btn svg   { width: 15px; height: 15px; stroke: currentColor; fill: none; stroke-width: 2; }
+
+  .btn-primary {
+    background: linear-gradient(135deg, var(--color-accent), var(--color-accent-dark));
+    color:      #fff;
+    box-shadow: 0 2px 10px var(--color-accent-glow);
+  }
+  .btn-primary:hover { box-shadow: 0 4px 16px var(--color-accent-glow); }
+
+  .btn-outline {
+    background:  transparent;
+    border:      1px solid var(--color-accent-border) !important;
+    color:       var(--color-accent);
+  }
+  .btn-outline:hover { background: var(--color-accent-soft); }
+
+  .btn-danger {
+    background: var(--color-danger-bg);
+    border:     1px solid var(--color-danger-border) !important;
+    color:      var(--color-danger-text);
+  }
+  .btn-danger:hover { background: var(--color-danger-border); }
+
+  /* ── Modal ───────────────────────────────────────────────── */
+  .modal-backdrop {
+    position:        fixed;
+    inset:           0;
+    background:      var(--color-bg-overlay);
+    z-index:         200;
+    display:         none;
+    align-items:     center;
+    justify-content: center;
+    backdrop-filter: blur(4px);
+    transition:      background .25s;
+  }
+  .modal-backdrop.open { display: flex; }
+
+  .modal {
+    background:    var(--color-bg-surface);
+    border:        1px solid var(--color-border);
+    border-radius: 18px;
+    padding:       28px;
+    max-width:     420px;
+    width:         90%;
+    text-align:    center;
+    box-shadow:    var(--shadow-lg);
+    transition:    background .25s, border-color .25s;
+  }
+  .modal h3 { color: var(--color-accent); margin-bottom: 16px; font-family: 'Syne', sans-serif; }
+
+  .avatar-preview {
+    width:         120px; height: 120px;
+    border-radius: 50%;
+    margin:        0 auto 16px;
+    overflow:      hidden;
+    background:    linear-gradient(135deg, var(--color-accent), var(--color-accent-dark));
+    display:       flex;
+    align-items:   center;
+    justify-content: center;
+    font-size:     2.5rem;
+    color:         white;
+  }
+  .avatar-preview img { width: 100%; height: 100%; object-fit: cover; }
+
+  .file-drop {
+    border:        2px dashed var(--color-border);
+    border-radius: 12px;
+    padding:       24px;
+    cursor:        pointer;
+    transition:    border-color .2s, background .2s;
+    margin-bottom: 16px;
+  }
+  .file-drop:hover {
+    border-color: var(--color-accent);
+    background:   var(--color-accent-soft);
+  }
+  .file-drop svg {
+    width:        28px; height: 28px;
+    stroke:       var(--color-accent);
+    fill:         none;
+    stroke-width: 1.5;
+    margin-bottom: 8px;
+    opacity:      .65;
+  }
+  .file-drop p { color: var(--color-text-muted); font-size: .88rem; }
+
+  /* ── Loading / Empty state ───────────────────────────────── */
+  #loading-state {
+    text-align: center;
+    padding:    80px;
+    color:      var(--color-text-muted);
+  }
+
+  /* ── Responsive ──────────────────────────────────────────── */
+  @media (max-width: 600px) {
+    nav { padding: 14px 20px; }
+    .profile-hero { flex-direction: column; text-align: center; padding: 24px; }
+    .avatar-wrap  { margin: 0 auto; }
+    .container    { padding: 32px 16px; }
+    .page-header h1 { font-size: 1.5rem; }
+  }
+</style>
+</head>
+<body>
+<div class="bg-mesh"></div>
+<div class="grid-overlay"></div>
+
+<!-- Avatar modal -->
+<div class="modal-backdrop" id="avatarModal">
+  <div class="modal">
+    <h3>Ubah Foto Profil</h3>
+    <div class="avatar-preview" id="avatarPreview"></div>
+    <div class="file-drop" onclick="document.getElementById('avatarFileInput').click()">
+      <svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+      <p>Klik atau seret foto ke sini<br><small>JPG, PNG, WEBP · maks 2 MB</small></p>
+    </div>
+    <input type="file" id="avatarFileInput" accept="image/*" style="display:none">
+    <div class="btn-row" style="justify-content:center">
+      <button class="btn btn-primary" onclick="saveAvatar()">
+        <svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>
+        Simpan
+      </button>
+      <button class="btn btn-outline" onclick="closeAvatarModal()">Batal</button>
+    </div>
+  </div>
+</div>
+
+<nav>
+  <a class="nav-logo" href="/">
+    <img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAb8AAAG/CAMAAAD/zSlAAAABBVBMVEX///8zF4XcAAD///3///szGIMrCIJYSpEwGYXhoqEeAH2ZlbjJwt7a1OLbR0c3IXwxE4wAAGng3ujv3d1zZZvJUlHaExHprq3VRD/OXlu+u8viAACmn8UtEHsoAIG7tc9pW5Sup8GeCDDLAAD0y8fTAABRFGruwbuNCj6/BRsqC31ALoKRh7Pt6O5BF3lMFXBjEVxwEVR4D1GDDkmnCCi4Bh+HDESuCCbKBBBSQZF6baiXCTboo5xdEWNMOI2DSXWyRkuAY4+XYIOeYXyqX3WxXmzBXWTwur6emrNCOXpiSYlsRoJ3SX6RSG2XSGegR2CrRlnJR0Z9dZ5IAGtXTYjYb2vHKDDp5OmrAAAHwUlEQVR4nO3dC3vSWAKA4TAhlEXZUqy7brXU+yiKro6XqY4ze5sZdS+u2p3//1M2oVQLDdBCTsrlfZ/HcWxpSc7XACUnSRQBAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA54tR5L0Ox4hPOe4kmO7m8Z1KtVhdsBedfoRHn1zD/br98tFrAPQzWbfSeyl3ho3srYpxzo0b9n9KSV6oa9Zr5enF/Oavtglwa/lfZjh4B4l5RKzSslw1mFrHUgOm9vd18kGNzf+cwb/vdRgEO3r//Z+ZfqZ8y//5P6sOHD//N/KXv8sfMlY9XQvjt9iBf1CxghfZHbWxcf7vXjrIH1jLzZY+OFxrdEbVarVtLLvZXt9rcqs2vu/so9fnz47tv/px68uTJ0+++e/HixevXN2/efPbs5cvn9+/f//77W5lvvrkawK1BvyguZoWGhyvVaST723uFPN+cRZz2q5yUtDYP+0W9rZxPn1GSJGm+x4/v3n3z5k2/39OnT9N+9+69zgr2Az5/nhVME975JoSsX9xfoWYBK5Sv22ns76X3UOYjaDXtV88Z8UG/auH9BpvfKvarVOq1rYNmXOZT4JR+xW9/K90vSSqNzRtlboCl93uzyv3SVa3Udh+W+CRYcr+7I/3ufXkBsyL9soLd7ai0l6H6FS2pVLY+lfYQql/R0pVtdd9GJb0O1S+E7uZOOrJlvCOqXwhJZ6Ndtf0tb79W42E5OyT0CyGptHZ7+i1tv1TjocfPZe7X2i3lt3j9QmlcLGMD1C+UTim/xOsXSu0gfD39gkla++3V6ze6/+Hequ1/+LLKlcrmzur0ezR9/9/91erXSpI9/Za3X/oEeOP8+2XzJzqT1MYsf3f4Zt3d3d3PqbvH578MHj1vPnt5+OB5azB/qXiH85cm96tNXM/Jcvt1FqBfFPcOtic5yP/pa+2P3O6vX/3t0N8z/8j8nPrl518G/hTE5a/zB/P7nVjis+gkOQEbi9Bv2lycnd3c0ehcK2HZZzG2X2OOJc57jkkq3QXoF8fViccBRDu5g5Gko3HsVocT6L/MM+/rT1Yeln2//gfnPDohf3b74D4m9Ju4qpP0tk4O4UL06w/74dEZR3/i4/8Yu/1lozF0669DePh/X9odG9soOjo6YXD7ob++lhj5c/Kzeab3yxZ47JpO/MTibn9Tje+3YEccDUzqN/P31K80+g3TT78y6TdMP/3KpN8w/fQrk37D9NOvTPoN00+/Muk3TL817XfyFFRhHe39mNTvNPuK8uT3W4j9t9PM2u+8TohW2v7bSmul+0WXfleuS4d3O77f9o2ZXcs7hc6K9/s1yESlsW5Nm/9SqY+ehurUKpVHeSO4CPPPppqtXxxH3965WmK+U8w/K1ZSWeXXL/1+JeY7l/mfizB/dyr98qX9HjQLKTSZfqHU3i3A8StT6TdO7XoRfabRL5ROKQfA6xdIUtvuReFP4bMu/e6Uvv1Vum+j8KcC1S+Y2m4z/LuEa9Pv29L7VRrb4d/m1S+UJKlsNT3/LW2/VOd98HP46BdOUt/qFRJpAv1CalyIAp/GVb+QagfpAAd9CNUvpFb2HrZ+y9ovqSQ72TWkAtIvpHrjbeC30PQLqvEw8K/w+gW1yv3KnP9yXv06q9kvyuaf/SGM/H7T9x8l2WkSZ7e5Zv0u/TGM/83Yr/Nqby4Xu+vVL5Qf8p9Xp+4/mmf+dd9Wa736jT1T0jyq0Q+zbX/JPMc/ZJctXrt+gczYb57jjzJpv7zvqt9Z6affDPQriH76zUC/guin3wz0K4h++s1Av4Lop98M9CuIfvrNYP36VatxgNMsjdt/dJp+M1+/Yy33P8w+WBMHcp79R7OLq1FjzfoFcn77b/O+6+r2u/3xchC/jdn+psxfSrr71+eyvU7zJw7nn5U5AW1avxNXLCzgGoCDfoV0Gmdd5n9O7xeEfkvdr65fQc7r+IcL6e9JhYQaQ7+Aklayp98y93vQjB3/t7T9Kq13PcffLm+/pPOpkEgT6BdQ0gh+ClD9AmptOv/LEverl/Au8Nr0K//8dfXafi/05qdfQN29sL/7ZfQLJMmOfQ988pBoffqVfP7dej3pbPSiyPPfsvarbZVx+QD9wqjXus1SZiDM1y+eff/7SvdrdTaawX/165u7X/4KTOtXXd1+SfbS5VMZ1+44HMh+v/qIM/Yb/fKp/c778bO/kGE8qnS2bgQ/b+vROMZZv2R0/M/Y78SXr3G/Wqf7qV3a3Lv0MfpCI3c6TrJzqi/f6XZqOTrXpp1279dbZc5funp0/b8obm7lLG7/vyev7Df8wbwVPSa9RaOx+e5hu8Spk2m/ve3tVzk+neblb9rvYCPX1Gun3b7y+zJd+Xr9xrwl3j/mx2MenMWPB68u7PRKuGjHMWnAXr7T/BRVo7jda7fbo1+bfmDaW0fxpXIdrU3c6y9te4LmjNJxyC7sGwe/aMDxYczPdMqfoXjc+0PndXniUwg8unEUeMYLAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAK+3/zU7RqGQJpvwAAAAASUVORK5CYII=" 
+         alt="Logo" style="width:36px; height:36px; border-radius:8px; object-fit:cover;">
+    <span class="nav-brand">Auto EDA Insight</span>
+  </a>
+  <div class="nav-links">
+    <a class="nav-link" href="/dashboard">Dashboard</a>
+    <a class="nav-link active" href="/profile">Profil</a>
+
+    <!-- Theme Toggle -->
+    <button class="theme-toggle" id="themeToggleBtn" title="Toggle Light/Dark Mode" aria-label="Toggle theme">
+      <!-- Sun icon (shown in dark mode → click to go light) -->
+      <svg class="icon-moon" viewBox="0 0 24 24"><path d="M21 12.79A9 9 0 1 1 11.21 3a7 7 0 0 0 9.79 9.79z"/></svg>
+      <!-- Moon icon (shown in light mode → click to go dark) -->
+      <svg class="icon-sun" viewBox="0 0 24 24"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
+    </button>
+
+    <button class="btn-logout" onclick="logout()">Keluar</button>
+  </div>
+</nav>
+
+<div class="container">
+  <div id="loading-state">Memuat profil...</div>
+  <div id="profile-content" style="display:none">
+
+    <div class="page-header">
+      <h1>Profil Saya</h1>
+      <p>Kelola informasi akun dan pengaturan Anda</p>
+    </div>
+
+    <div class="profile-hero">
+      <div class="avatar-wrap">
+        <div class="avatar" id="avatarDisplay"></div>
+        <div class="avatar-edit-btn" onclick="openAvatarModal()" title="Ubah foto">
+          <svg viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+        </div>
+      </div>
+      <div class="profile-info">
+        <h2 id="profileName">—</h2>
+        <div class="username-tag">@<span id="profileUsername">—</span></div>
+        <div class="email" id="profileEmail"></div>
+      </div>
+    </div>
+
+    <div class="stat-grid">
+      <div class="stat-card">
+        <div class="stat-icon"><svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg></div>
+        <div class="val" id="statUploads">0</div>
+        <div class="lbl">Total Upload</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg></div>
+        <div class="val" id="statJoined" style="font-size:1rem;margin-top:6px">—</div>
+        <div class="lbl">Bergabung</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon"><svg viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg></div>
+        <div class="val" id="statLastLogin" style="font-size:1rem;margin-top:6px">—</div>
+        <div class="lbl">Login Terakhir</div>
+      </div>
+    </div>
+
+    <!-- TABS -->
+    <div class="tabs">
+      <button class="tab-btn active" onclick="switchTab(this,'tab-info')">Info Akun</button>
+      <button class="tab-btn" onclick="switchTab(this,'tab-edit')">Edit Profil</button>
+      <button class="tab-btn" onclick="switchTab(this,'tab-password')">Ubah Password</button>
+    </div>
+
+    <!-- TAB: INFO -->
+    <div class="tab-content active" id="tab-info">
+      <div class="detail-card">
+        <h3>Detail Akun</h3>
+        <div class="detail-row"><span class="lbl">Username</span><span class="val" id="detailUsername">—</span></div>
+        <div class="detail-row"><span class="lbl">Nama Lengkap</span><span class="val" id="detailName">—</span></div>
+        <div class="detail-row"><span class="lbl">Email</span><span class="val" id="detailEmail">—</span></div>
+        <div class="detail-row"><span class="lbl">Tanggal Daftar</span><span class="val" id="detailCreated">—</span></div>
+        <div class="detail-row"><span class="lbl">Login Terakhir</span><span class="val" id="detailLastLogin">—</span></div>
+        <div class="detail-row"><span class="lbl">Total File Diupload</span><span class="val" id="detailUploads">0</span></div>
+      </div>
+    </div>
+
+    <!-- TAB: EDIT PROFIL -->
+    <div class="tab-content" id="tab-edit">
+      <div class="edit-card">
+        <h3>Edit Informasi Profil</h3>
+        <div id="editAlert" class="alert"></div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Nama Lengkap</label>
+            <input class="form-input" id="editName" type="text" placeholder="Nama lengkap Anda">
+          </div>
+          <div class="form-group">
+            <label>Email</label>
+            <input class="form-input" id="editEmail" type="email" placeholder="email@example.com">
+          </div>
+        </div>
+        <div class="form-group">
+          <label>Username</label>
+          <input class="form-input" id="editUsernameDisabled" type="text" disabled>
+          <div class="form-hint">Username tidak dapat diubah</div>
+        </div>
+        <div class="btn-row">
+          <button class="btn btn-primary" onclick="saveProfile()">
+            <svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>
+            Simpan Perubahan
+          </button>
+          <button class="btn btn-outline" onclick="cancelEdit()">Batal</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB: UBAH PASSWORD -->
+    <div class="tab-content" id="tab-password">
+      <div class="edit-card">
+        <h3>Ubah Password</h3>
+        <div id="pwAlert" class="alert"></div>
+        <div class="form-group">
+          <label>Password Saat Ini</label>
+          <input class="form-input" id="currentPw" type="password" placeholder="Masukkan password saat ini">
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Password Baru</label>
+            <input class="form-input" id="newPw" type="password" placeholder="Minimal 6 karakter">
+          </div>
+          <div class="form-group">
+            <label>Konfirmasi Password Baru</label>
+            <input class="form-input" id="confirmPw" type="password" placeholder="Ulangi password baru">
+          </div>
+        </div>
+        <div class="btn-row">
+          <button class="btn btn-primary" onclick="savePassword()">
+            <svg viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+            Ubah Password
+          </button>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script src="/static/js/theme.js"></script>
+<script>
+  let currentUser   = null;
+  let pendingAvatarData = null;
+
+  /* ── Wire up theme toggle btn ──────────────────────────── */
+  // Theme toggle handled by theme.js (bound via .theme-toggle class)
+
+  /* ── Profile data ──────────────────────────────────────── */
+  async function loadProfile() {
+    try {
+      const res  = await fetch('/api/auth/me');
+      const data = await res.json();
+      if (!data.logged_in) { window.location.href = '/login'; return; }
+      currentUser = data.user;
+      renderProfile(currentUser);
+      document.getElementById('loading-state').style.display   = 'none';
+      document.getElementById('profile-content').style.display = 'block';
+    } catch(e) { window.location.href = '/login'; }
+  }
+
+  function renderProfile(u) {
+    const name = u.full_name || u.username;
+
+    const avatarEl = document.getElementById('avatarDisplay');
+    if (u.avatar_url) {
+      avatarEl.innerHTML = `<img src="${u.avatar_url}" alt="Avatar">`;
+    } else {
+      avatarEl.textContent = name.charAt(0).toUpperCase();
+    }
+
+    document.getElementById('profileName').textContent     = name;
+    document.getElementById('profileUsername').textContent = u.username;
+    document.getElementById('profileEmail').textContent    = u.email || '';
+
+    document.getElementById('statUploads').textContent    = u.upload_count || 0;
+    document.getElementById('statJoined').textContent     = u.created_at   || '—';
+    document.getElementById('statLastLogin').textContent  = u.last_login   || '—';
+
+    document.getElementById('detailUsername').textContent  = u.username;
+    document.getElementById('detailName').textContent      = u.full_name   || '(tidak diisi)';
+    document.getElementById('detailEmail').textContent     = u.email       || '(tidak diisi)';
+    document.getElementById('detailCreated').textContent   = u.created_at  || '—';
+    document.getElementById('detailLastLogin').textContent = u.last_login  || 'Baru pertama kali';
+    document.getElementById('detailUploads').textContent   = u.upload_count || 0;
+
+    document.getElementById('editName').value             = u.full_name || '';
+    document.getElementById('editEmail').value            = u.email || '';
+    document.getElementById('editUsernameDisabled').value = u.username;
+  }
+
+  function cancelEdit() {
+    document.getElementById('editName').value  = currentUser.full_name || '';
+    document.getElementById('editEmail').value = currentUser.email || '';
+    showAlert('editAlert', '', '');
+  }
+
+  async function saveProfile() {
+    const full_name = document.getElementById('editName').value.trim();
+    const email     = document.getElementById('editEmail').value.trim();
+    try {
+      const res  = await fetch('/api/auth/update-profile', {
+        method:  'POST',
+        headers: {'Content-Type': 'application/json'},
+        body:    JSON.stringify({ full_name, email })
+      });
+      const data = await res.json();
+      if (data.success) {
+        currentUser = data.user;
+        renderProfile(currentUser);
+        showAlert('editAlert', 'Profil berhasil diperbarui! ✓', 'success');
+      } else {
+        showAlert('editAlert', data.error || 'Gagal menyimpan.', 'error');
+      }
+    } catch(e) { showAlert('editAlert', 'Koneksi gagal.', 'error'); }
+  }
+
+  async function savePassword() {
+    const current_password = document.getElementById('currentPw').value;
+    const new_password     = document.getElementById('newPw').value;
+    const confirm          = document.getElementById('confirmPw').value;
+
+    if (!current_password) {
+      showAlert('pwAlert', 'Masukkan password saat ini.', 'error'); return;
+    }
+    if (new_password !== confirm) {
+      showAlert('pwAlert', 'Konfirmasi password tidak cocok.', 'error'); return;
+    }
+    if (new_password.length < 6) {
+      showAlert('pwAlert', 'Password baru minimal 6 karakter.', 'error'); return;
+    }
+    try {
+      const res  = await fetch('/api/auth/update-password', {
+        method:  'POST',
+        headers: {'Content-Type': 'application/json'},
+        body:    JSON.stringify({ current_password, new_password })
+      });
+      const data = await res.json();
+      if (data.success) {
+        document.getElementById('currentPw').value = '';
+        document.getElementById('newPw').value     = '';
+        document.getElementById('confirmPw').value = '';
+        showAlert('pwAlert', 'Password berhasil diubah! ✓', 'success');
+      } else {
+        showAlert('pwAlert', data.error || 'Gagal mengubah password.', 'error');
+      }
+    } catch(e) { showAlert('pwAlert', 'Koneksi gagal.', 'error'); }
+  }
+
+  /* ── Avatar modal ──────────────────────────────────────── */
+  function openAvatarModal() {
+    pendingAvatarData = null;
+    const preview = document.getElementById('avatarPreview');
+    if (currentUser.avatar_url) {
+      preview.innerHTML = `<img src="${currentUser.avatar_url}" alt="Avatar">`;
+    } else {
+      const name = currentUser.full_name || currentUser.username;
+      preview.textContent = name.charAt(0).toUpperCase();
+    }
+    document.getElementById('avatarModal').classList.add('open');
+  }
+
+  function closeAvatarModal() {
+    document.getElementById('avatarModal').classList.remove('open');
+  }
+
+  document.getElementById('avatarFileInput').addEventListener('change', function(e) {
+    const file = e.target.files[0];
+    if (!file) return;
+    if (file.size > 2 * 1024 * 1024) { alert('Ukuran file maksimal 2 MB.'); return; }
+    const reader = new FileReader();
+    reader.onload = function(ev) {
+      pendingAvatarData = ev.target.result;
+      document.getElementById('avatarPreview').innerHTML = `<img src="${pendingAvatarData}" alt="Preview">`;
+    };
+    reader.readAsDataURL(file);
+  });
+
+  async function saveAvatar() {
+    if (!pendingAvatarData) { closeAvatarModal(); return; }
+    try {
+      const res  = await fetch('/api/auth/update-avatar', {
+        method:  'POST',
+        headers: {'Content-Type': 'application/json'},
+        body:    JSON.stringify({ avatar_data: pendingAvatarData })
+      });
+      const data = await res.json();
+      if (data.success) {
+        currentUser = data.user;
+        renderProfile(currentUser);
+        closeAvatarModal();
+      } else { alert(data.error || 'Gagal menyimpan foto.'); }
+    } catch(e) { alert('Koneksi gagal.'); }
+  }
+
+  /* ── Utils ─────────────────────────────────────────────── */
+  function switchTab(btn, tabId) {
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+    document.getElementById(tabId).classList.add('active');
+  }
+
+  function showAlert(id, msg, type) {
+    const el = document.getElementById(id);
+    el.textContent = msg;
+    el.className   = 'alert ' + type;
+    el.style.display = msg ? 'block' : 'none';
+  }
+
+  async function logout() {
+    await fetch('/api/auth/logout', { method: 'POST' });
+    window.location.href = '/login';
+  }
+
+  loadProfile();
+</script>
+</body>
+</html>

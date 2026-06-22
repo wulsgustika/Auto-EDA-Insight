@@ -1,0 +1,673 @@
+<!DOCTYPE html>
+<html lang="id" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Daftar — Auto EDA Insight</title>
+<link rel="stylesheet" href="/static/css/theme.css">
+<script>try{var t=localStorage.getItem('eda-theme');if(t)document.documentElement.setAttribute('data-theme',t);}catch(_){}</script>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=Syne:wght@700;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --primary: #0EA5E9;
+    --primary-dark: #0369A1;
+    --primary-light: #E0F2FE;
+    --bg-light: #F8FAFC;
+    --surface: #FFFFFF;
+    --border: #CBD5E1;
+    --text: #0F172A;
+    --text-muted: #475569;
+    --text-light: #94A3B8;
+    --hint-valid: #059669;
+    --hint-invalid: #EF4444;
+    --gradient: linear-gradient(135deg, var(--primary), var(--primary-dark));
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background-color: var(--bg-light);
+    color: var(--text);
+    font-family: 'Space Grotesk', sans-serif;
+    min-height: 100vh;
+    display: flex;
+    align-items: flex-start;
+    justify-content: center;
+    padding: 40px 20px;
+    overflow-x: hidden;
+    position: relative;
+  }
+
+  /* ===== ANIMATED BACKGROUND ===== */
+  .bg-layer {
+    position: fixed; inset: 0; z-index: 0;
+    background:
+      radial-gradient(ellipse 90% 60% at 50% 0%, rgba(14,165,233,0.30) 0%, transparent 55%),
+      radial-gradient(ellipse 60% 50% at 85% 20%, rgba(6,182,212,0.22) 0%, transparent 55%),
+      radial-gradient(ellipse 55% 45% at 10% 65%, rgba(99,102,241,0.16) 0%, transparent 55%),
+      linear-gradient(180deg, #A8D8F8 0%, #C8EAFF 30%, #DFF3FF 60%, #EDF8FF 100%);
+    pointer-events: none;
+  }
+
+  /* Grid dots overlay */
+  .bg-grid {
+    position: fixed; inset: 0; z-index: 0;
+    background-image:
+      linear-gradient(rgba(14,165,233,0.07) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(14,165,233,0.07) 1px, transparent 1px);
+    background-size: 56px 56px;
+    mask-image: radial-gradient(ellipse 80% 80% at 50% 50%, black 0%, transparent 80%);
+    pointer-events: none;
+  }
+
+  /* Aurora orbs */
+  .aurora-orb {
+    position: fixed; border-radius: 50%;
+    filter: blur(70px);
+    pointer-events: none;
+    animation: orbFloat 9s ease-in-out infinite;
+  }
+  .orb1 { width: 420px; height: 420px; background: radial-gradient(circle, rgba(14,165,233,0.45), transparent 70%); top: -120px; left: -100px; animation-delay: 0s; }
+  .orb2 { width: 360px; height: 360px; background: radial-gradient(circle, rgba(6,182,212,0.38), transparent 70%); top: -60px; right: -80px; animation-delay: -3.5s; }
+  .orb3 { width: 300px; height: 300px; background: radial-gradient(circle, rgba(99,102,241,0.28), transparent 70%); bottom: 60px; left: 5%; animation-delay: -6s; }
+  .orb4 { width: 260px; height: 260px; background: radial-gradient(circle, rgba(236,72,153,0.18), transparent 70%); bottom: 100px; right: 8%; animation-delay: -2s; }
+  @keyframes orbFloat {
+    0%, 100% { transform: translate(0, 0) scale(1); }
+    33% { transform: translate(28px, -18px) scale(1.06); }
+    66% { transform: translate(-18px, 14px) scale(0.94); }
+  }
+
+  /* Floating particles */
+  .particle {
+    position: fixed; border-radius: 50%;
+    pointer-events: none;
+    animation: particleFloat linear infinite;
+  }
+  @keyframes particleFloat {
+    0% { transform: translateY(110vh) rotate(0deg); opacity: 0; }
+    8% { opacity: 1; }
+    92% { opacity: 1; }
+    100% { transform: translateY(-80px) rotate(720deg); opacity: 0; }
+  }
+
+  /* ===== CARD ===== */
+  .card {
+    position: relative; z-index: 1;
+    background: rgba(255,255,255,0.88);
+    border: 1px solid rgba(14,165,233,0.2);
+    border-radius: 24px;
+    padding: 40px 36px;
+    max-width: 500px;
+    width: 100%;
+    animation: fadeUp 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+    box-shadow:
+      0 12px 40px rgba(14,165,233,0.15),
+      0 0 0 1px rgba(255,255,255,0.6) inset;
+    backdrop-filter: blur(20px);
+  }
+  /* Shine line on card top */
+  .card::before {
+    content: '';
+    position: absolute; top: 0; left: 10%; right: 10%;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, rgba(14,165,233,0.5), rgba(99,102,241,0.4), transparent);
+    border-radius: 100%;
+  }
+
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(32px) scale(0.97); }
+    to { opacity: 1; transform: none; }
+  }
+
+  /* ===== LOGO ===== */
+  .logo {
+    display: flex; align-items: center; gap: 12px;
+    justify-content: center; margin-bottom: 24px;
+    text-decoration: none;
+  }
+  .logo-icon {
+    width: 46px; height: 46px;
+    background: var(--gradient);
+    border-radius: 13px;
+    display: flex; align-items: center; justify-content: center;
+    box-shadow: 0 4px 16px rgba(14,165,233,0.4), 0 0 0 3px rgba(14,165,233,0.1);
+    animation: logoPulse 3s ease-in-out infinite;
+  }
+  @keyframes logoPulse {
+    0%, 100% { box-shadow: 0 4px 16px rgba(14,165,233,0.4), 0 0 0 3px rgba(14,165,233,0.1); }
+    50% { box-shadow: 0 4px 20px rgba(14,165,233,0.55), 0 0 0 6px rgba(14,165,233,0.08); }
+  }
+  .logo-text { font-family: 'Syne', sans-serif; font-size: 1.25rem; font-weight: 800; color: var(--primary-dark); }
+
+  h1 { text-align: center; font-size: 1.5rem; margin-bottom: 4px; color: var(--text); font-weight: 700; }
+  .sub { text-align: center; color: var(--text-muted); font-size: 0.88rem; margin-bottom: 24px; }
+
+  /* ===== FORM ===== */
+  .form-group { margin-bottom: 14px; position: relative; }
+  .form-group.row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 0; }
+  label { display: flex; align-items: center; gap: 5px; font-size: 0.82rem; color: var(--text); margin-bottom: 5px; font-weight: 600; }
+  label .req { color: var(--primary); font-size: 0.7rem; }
+  label .opt { color: var(--text-light); font-size: 0.7rem; }
+
+  .input-wrap { position: relative; }
+  input {
+    width: 100%;
+    background: rgba(248,250,252,0.8);
+    border: 1.5px solid rgba(203,213,225,0.8);
+    border-radius: 11px;
+    padding: 11px 45px 11px 16px;
+    color: var(--text);
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 0.92rem;
+    transition: all 0.25s ease;
+    outline: none;
+    backdrop-filter: blur(4px);
+  }
+  input::placeholder { color: var(--text-light); }
+  input:focus {
+    border-color: var(--primary);
+    background: rgba(255,255,255,0.95);
+    box-shadow: 0 0 0 3px rgba(14,165,233,0.12), 0 2px 8px rgba(14,165,233,0.1);
+  }
+  input.valid { border-color: rgba(5,150,105,0.6); background: rgba(240,253,244,0.8); }
+  input.invalid { border-color: rgba(239,68,68,0.5); background: rgba(255,241,242,0.6); }
+
+  .toggle-pw {
+    position: absolute; right: 14px; top: 50%; transform: translateY(-50%);
+    font-size: 0.8rem; cursor: pointer; color: var(--text-light);
+    z-index: 5; font-weight: 600; transition: color 0.2s;
+    -webkit-user-select: none; user-select: none;
+  }
+  .toggle-pw:hover { color: var(--primary); }
+
+  .input-icon {
+    position: absolute; right: 54px; top: 50%;
+    transform: translateY(-50%); font-size: 1rem;
+    pointer-events: none; z-index: 1;
+  }
+
+  .field-hint { font-size: 0.75rem; color: var(--text-muted); margin-top: 4px; min-height: 16px; }
+  .field-hint.err { color: var(--hint-invalid); }
+  .field-hint.ok { color: var(--hint-valid); }
+
+  /* ===== PASSWORD STRENGTH ===== */
+  .strength-bar {
+    height: 5px; border-radius: 4px;
+    background: rgba(14,165,233,0.08);
+    margin-top: 6px; overflow: hidden;
+  }
+  .strength-fill {
+    height: 100%; border-radius: 4px;
+    transition: width .35s ease, background .35s ease;
+    width: 0;
+    box-shadow: 0 0 8px currentColor;
+  }
+
+  /* ===== ERROR MSG ===== */
+  .error-msg {
+    background: rgba(254,242,242,0.9);
+    border: 1px solid #FECACA;
+    border-radius: 11px;
+    padding: 10px 14px;
+    color: #EF4444; font-size: 0.85rem;
+    margin-bottom: 14px;
+    display: none; align-items: center; gap: 8px;
+    backdrop-filter: blur(4px);
+  }
+  .error-msg.show { display: flex; animation: fadeUp 0.2s ease both; }
+
+  /* ===== SUBMIT BUTTON ===== */
+  .btn-submit {
+    width: 100%; padding: 13px;
+    background: var(--gradient);
+    border: none; border-radius: 11px;
+    color: white; font-family: 'Space Grotesk', sans-serif;
+    font-weight: 700; font-size: 1rem;
+    cursor: pointer; transition: all 0.25s ease;
+    margin-top: 6px;
+    box-shadow: 0 6px 20px rgba(14,165,233,0.4);
+    position: relative; overflow: hidden;
+    animation: btnGlow 3s ease-in-out infinite;
+  }
+  @keyframes btnGlow {
+    0%, 100% { box-shadow: 0 6px 20px rgba(14,165,233,0.4); }
+    50% { box-shadow: 0 6px 24px rgba(14,165,233,0.6), 0 0 16px rgba(14,165,233,0.15); }
+  }
+  .btn-submit::before {
+    content: '';
+    position: absolute; top: 0; left: -70%;
+    width: 40%; height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.25), transparent);
+    transform: skewX(-20deg);
+    transition: left 0.45s ease;
+  }
+  .btn-submit:hover::before { left: 120%; }
+  .btn-submit:hover { transform: translateY(-2px); box-shadow: 0 10px 28px rgba(14,165,233,0.55); }
+  .btn-submit:disabled {
+    opacity: 0.45; cursor: not-allowed;
+    transform: none; animation: none;
+    box-shadow: 0 4px 12px rgba(14,165,233,0.2);
+  }
+
+  /* ===== MODAL ===== */
+  .modal-bg {
+    position: fixed; inset: 0; z-index: 200;
+    background: rgba(15,23,42,0.5);
+    backdrop-filter: blur(8px);
+    display: none; align-items: center; justify-content: center;
+    padding: 20px;
+  }
+  .modal-bg.show { display: flex; }
+  .modal {
+    background: rgba(255,255,255,0.95);
+    border: 1px solid rgba(14,165,233,0.25);
+    border-radius: 20px;
+    padding: 36px 32px;
+    max-width: 420px; width: 100%;
+    animation: fadeUp .35s cubic-bezier(0.34,1.56,0.64,1);
+    box-shadow: 0 16px 48px rgba(14,165,233,0.2), 0 0 0 1px rgba(255,255,255,0.7) inset;
+    backdrop-filter: blur(20px);
+    position: relative;
+  }
+  .modal::before {
+    content: '';
+    position: absolute; top: 0; left: 10%; right: 10%;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, rgba(14,165,233,0.5), rgba(99,102,241,0.4), transparent);
+  }
+  .modal h2 { color: var(--primary-dark); font-size: 1.25rem; margin-bottom: 6px; font-family: 'Syne', sans-serif; font-weight: 700; }
+  .modal .mo-sub { color: var(--text-muted); font-size: 0.85rem; margin-bottom: 22px; }
+  .confirm-table { width: 100%; border-collapse: collapse; margin-bottom: 24px; }
+  .confirm-table td { padding: 9px 0; border-bottom: 1px solid rgba(14,165,233,0.08); font-size: 0.88rem; }
+  .confirm-table td:first-child { color: var(--text-muted); width: 40%; }
+  .confirm-table td:last-child { color: var(--text); font-weight: 600; }
+  .modal-btns { display: flex; gap: 12px; }
+  .btn-confirm {
+    flex: 1; padding: 12px; border: none; border-radius: 11px;
+    background: var(--gradient); color: white;
+    font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: 0.95rem;
+    cursor: pointer; transition: all 0.25s ease;
+    box-shadow: 0 4px 16px rgba(14,165,233,0.35);
+    position: relative; overflow: hidden;
+  }
+  .btn-confirm::before {
+    content: '';
+    position: absolute; top: 0; left: -70%;
+    width: 40%; height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.25), transparent);
+    transform: skewX(-20deg);
+    transition: left 0.4s ease;
+  }
+  .btn-confirm:hover::before { left: 120%; }
+  .btn-confirm:hover { transform: translateY(-1px); box-shadow: 0 6px 20px rgba(14,165,233,0.5); }
+  .btn-cancel {
+    flex: 1; padding: 12px;
+    border: 1.5px solid rgba(203,213,225,0.8);
+    border-radius: 11px;
+    background: rgba(248,250,252,0.6);
+    color: var(--text-muted);
+    font-family: 'Space Grotesk', sans-serif; font-weight: 500; font-size: 0.95rem;
+    cursor: pointer; transition: all 0.2s ease;
+    backdrop-filter: blur(4px);
+  }
+  .btn-cancel:hover { border-color: var(--primary); color: var(--primary); background: rgba(224,242,254,0.3); }
+
+  /* ===== DIVIDER & LINKS ===== */
+  .divider { text-align: center; color: var(--text-light); font-size: 0.83rem; margin: 20px 0 12px; }
+  .link { color: var(--primary); text-decoration: none; font-weight: 600; }
+  .link:hover { text-decoration: underline; }
+
+  /* ===== SUCCESS SCREEN ===== */
+  .success-screen { display: none; text-align: center; padding: 10px 0; }
+  .success-screen .big-check {
+    width: 76px; height: 76px;
+    background: linear-gradient(135deg, #D1FAE5, #A7F3D0);
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    margin: 0 auto 24px;
+    box-shadow: 0 4px 20px rgba(5,150,105,0.3), 0 0 0 8px rgba(5,150,105,0.08);
+    animation: checkPop 0.5s cubic-bezier(0.34,1.56,0.64,1) both;
+  }
+  @keyframes checkPop {
+    from { transform: scale(0); opacity: 0; }
+    to { transform: scale(1); opacity: 1; }
+  }
+  .success-screen h2 { color: var(--text); font-family: 'Syne', sans-serif; font-size: 1.5rem; font-weight: 800; margin-bottom: 12px; }
+  .success-screen p { color: var(--text-muted); font-size: 0.92rem; line-height: 1.6; }
+  .progress-bar { height: 5px; background: rgba(14,165,233,0.12); border-radius: 4px; margin-top: 24px; overflow: hidden; }
+  .progress-fill {
+    height: 100%;
+    background: var(--gradient);
+    border-radius: 4px;
+    animation: progress 2.2s linear forwards;
+    box-shadow: 0 0 10px rgba(14,165,233,0.4);
+  }
+  @keyframes progress { from { width: 0 } to { width: 100% } }
+
+  [data-theme="light"] body { background: #EEF4FB; }
+  [data-theme="light"] .card { background: #FFFFFF; border-color: rgba(2,132,199,0.2); }
+  [data-theme="light"] .card-header h1 { color: #0F172A; }
+  [data-theme="light"] .card-header p { color: #334155; }
+  [data-theme="light"] .form-group label { color: #0F172A; }
+  [data-theme="light"] .form-input { background: #fff; border-color: rgba(2,132,199,0.25); color: #0F172A; }
+  [data-theme="light"] .form-input::placeholder { color: #94A3B8; }
+  [data-theme="light"] .logo-text { color: #0F172A; }
+  [data-theme="light"] .link-row { color: #334155; }
+  [data-theme="light"] .form-hint, [data-theme="light"] .helper-text,
+  [data-theme="light"] .password-strength-text { color: #64748B; }
+
+  /* ===== THEME TOGGLE POSITION ===== */
+  #themeToggleBtn {
+    position: fixed;
+    top: 16px;
+    right: 16px;
+    z-index: 9999;
+  }
+
+  /* ===== LIGHT MODE BACKGROUND ===== */
+  [data-theme="light"] .bg-layer {
+    background:
+      radial-gradient(ellipse 90% 60% at 50% 0%, rgba(14,165,233,0.18) 0%, transparent 55%),
+      radial-gradient(ellipse 60% 50% at 85% 20%, rgba(6,182,212,0.12) 0%, transparent 55%),
+      radial-gradient(ellipse 55% 45% at 10% 65%, rgba(99,102,241,0.08) 0%, transparent 55%),
+      linear-gradient(180deg, #DBEAFE 0%, #E0F2FE 30%, #F0F9FF 60%, #F8FAFC 100%);
+  }
+  [data-theme="light"] .orb1 { background: radial-gradient(circle, rgba(14,165,233,0.25), transparent 70%); }
+  [data-theme="light"] .orb2 { background: radial-gradient(circle, rgba(6,182,212,0.20), transparent 70%); }
+  [data-theme="light"] .orb3 { background: radial-gradient(circle, rgba(99,102,241,0.14), transparent 70%); }
+  [data-theme="light"] .orb4 { background: radial-gradient(circle, rgba(236,72,153,0.10), transparent 70%); }
+  [data-theme="light"] .theme-toggle { border-color: rgba(2,132,199,0.3); background: rgba(2,132,199,0.08); color: #0284C7; }
+
+</style>
+</head>
+<body>
+<button class="theme-toggle" id="themeToggleBtn" title="Toggle Light/Dark Mode" aria-label="Toggle theme">
+  <svg class="icon-moon" viewBox="0 0 24 24" width="17" height="17" stroke="currentColor" fill="none" stroke-width="2"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+  <svg class="icon-sun" viewBox="0 0 24 24" width="17" height="17" stroke="currentColor" fill="none" stroke-width="2"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
+</button>
+
+<!-- Background layers -->
+<div class="bg-layer"></div>
+<div class="bg-grid"></div>
+<div class="aurora-orb orb1"></div>
+<div class="aurora-orb orb2"></div>
+<div class="aurora-orb orb3"></div>
+<div class="aurora-orb orb4"></div>
+<div id="particles"></div>
+
+<!-- Confirm Modal -->
+<div class="modal-bg" id="confirmModal">
+  <div class="modal">
+    <h2>Konfirmasi Pendaftaran</h2>
+    <p class="mo-sub">Pastikan data di bawah sudah benar sebelum mendaftar.</p>
+    <table class="confirm-table">
+      <tr><td>Username</td><td id="cfmUsername">—</td></tr>
+      <tr><td>Nama Lengkap</td><td id="cfmName">—</td></tr>
+      <tr><td>Email</td><td id="cfmEmail">—</td></tr>
+      <tr><td>Password</td><td id="cfmPwVisible">••••••••</td></tr>
+    </table>
+    <div class="modal-btns">
+      <button class="btn-cancel" onclick="closeModal()">Edit Lagi</button>
+      <button class="btn-confirm" id="btnConfirm" onclick="submitRegister()">Daftar Sekarang</button>
+    </div>
+  </div>
+</div>
+
+<div class="card">
+  <a href="/" class="logo">
+    <img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAb8AAAG/CAMAAAD/zSlAAAABBVBMVEX///8zF4XcAAD///3///szGIMrCIJYSpEwGYXhoqEeAH2ZlbjJwt7a1OLbR0c3IXwxE4wAAGng3ujv3d1zZZvJUlHaExHprq3VRD/OXlu+u8viAACmn8UtEHsoAIG7tc9pW5Sup8GeCDDLAAD0y8fTAABRFGruwbuNCj6/BRsqC31ALoKRh7Pt6O5BF3lMFXBjEVxwEVR4D1GDDkmnCCi4Bh+HDESuCCbKBBBSQZF6baiXCTboo5xdEWNMOI2DSXWyRkuAY4+XYIOeYXyqX3WxXmzBXWTwur6emrNCOXpiSYlsRoJ3SX6RSG2XSGegR2CrRlnJR0Z9dZ5IAGtXTYjYb2vHKDDp5OmrAAAHwUlEQVR4nO3dC3vSWAKA4TAhlEXZUqy7brXU+yiKro6XqY4ze5sZdS+u2p3//1M2oVQLDdBCTsrlfZ/HcWxpSc7XACUnSRQBAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA54tR5L0Ox4hPOe4kmO7m8Z1KtVhdsBedfoRHn1zD/br98tFrAPQzWbfSeyl3ho3srYpxzo0b9n9KSV6oa9Zr5enF/Oavtglwa/lfZjh4B4l5RKzSslw1mFrHUgOm9vd18kGNzf+cwb/vdRgEO3r//Z+ZfqZ8y//5P6sOHD//N/KXv8sfMlY9XQvjt9iBf1CxghfZHbWxcf7vXjrIH1jLzZY+OFxrdEbVarVtLLvZXt9rcqs2vu/so9fnz47tv/px68uTJ0+++e/HixevXN2/efPbs5cvn9+/f//77W5lvvrkawK1BvyguZoWGhyvVaST723uFPN+cRZz2q5yUtDYP+0W9rZxPn1GSJGm+x4/v3n3z5k2/39OnT9N+9+69zgr2Az5/nhVME975JoSsX9xfoWYBK5Sv22ns76X3UOYjaDXtV88Z8UG/auH9BpvfKvarVOq1rYNmXOZT4JR+xW9/K90vSSqNzRtlboCl93uzyv3SVa3Udh+W+CRYcr+7I/3ufXkBsyL9soLd7ai0l6H6FS2pVLY+lfYQql/R0pVtdd9GJb0O1S+E7uZOOrJlvCOqXwhJZ6Ndtf0tb79W42E5OyT0CyGptHZ7+i1tv1TjocfPZe7X2i3lt3j9QmlcLGMD1C+UTim/xOsXSu0gfD39gkla++3V6ze6/+Hequ1/+LLKlcrmzur0ezR9/9/91erXSpI9/Za3X/oEeOP8+2XzJzqT1MYsf3f4Zt3d3d3PqbvH578MHj1vPnt5+OB5azB/qXiH85cm96tNXM/Jcvt1FqBfFPcOtic5yP/pa+2P3O6vX/3t0N8z/8j8nPrl518G/hTE5a/zB/P7nVjis+gkOQEbi9Bv2lycnd3c0ehcK2HZZzG2X2OOJc57jkkq3QXoF8fViccBRDu5g5Gko3HsVocT6L/MM+/rT1Yeln2//gfnPDohf3b74D4m9Ju4qpP0tk4O4UL06w/74dEZR3/i4/8Yu/1lozF0669DePh/X9odG9soOjo6YXD7ob++lhj5c/Kzeab3yxZ47JpO/MTibn9Tje+3YEccDUzqN/P31K80+g3TT78y6TdMP/3KpN8w/fQrk37D9NOvTPoN00+/Muk3TL817XfyFFRhHe39mNTvNPuK8uT3W4j9t9PM2u+8TohW2v7bSmul+0WXfleuS4d3O77f9o2ZXcs7hc6K9/s1yESlsW5Nm/9SqY+ehurUKpVHeSO4CPPPppqtXxxH3965WmK+U8w/K1ZSWeXXL/1+JeY7l/mfizB/dyr98qX9HjQLKTSZfqHU3i3A8StT6TdO7XoRfabRL5ROKQfA6xdIUtvuReFP4bMu/e6Uvv1Vum+j8KcC1S+Y2m4z/LuEa9Pv29L7VRrb4d/m1S+UJKlsNT3/LW2/VOd98HP46BdOUt/qFRJpAv1CalyIAp/GVb+QagfpAAd9CNUvpFb2HrZ+y9ovqSQ72TWkAtIvpHrjbeC30PQLqvEw8K/w+gW1yv3KnP9yXv06q9kvyuaf/SGM/H7T9x8l2WkSZ7e5Zv0u/TGM/83Yr/Nqby4Xu+vVL5Qf8p9Xp+4/mmf+dd9Wa736jT1T0jyq0Q+zbX/JPMc/ZJctXrt+gczYb57jjzJpv7zvqt9Z6affDPQriH76zUC/guin3wz0K4h++s1Av4Lop98M9CuIfvrNYP36VatxgNMsjdt/dJp+M1+/Yy33P8w+WBMHcp79R7OLq1FjzfoFcn77b/O+6+r2u/3xchC/jdn+psxfSrr71+eyvU7zJw7nn5U5AW1avxNXLCzgGoCDfoV0Gmdd5n9O7xeEfkvdr65fQc7r+IcL6e9JhYQaQ7+Aklayp98y93vQjB3/t7T9Kq13PcffLm+/pPOpkEgT6BdQ0gh+ClD9AmptOv/LEverl/Au8Nr0K//8dfXafi/05qdfQN29sL/7ZfQLJMmOfQ988pBoffqVfP7dej3pbPSiyPPfsvarbZVx+QD9wqjXus1SZiDM1y+eff/7SvdrdTaawX/165u7X/4KTOtXXd1+SfbS5VMZ1+44HMh+v/qIM/Yb/fKp/c778bO/kGE8qnS2bgQ/b+vROMZZv2R0/M/Y78SXr3G/Wqf7qV3a3Lv0MfpCI3c6TrJzqi/f6XZqOTrXpp1279dbZc5funp0/b8obm7lLG7/vyev7Df8wbwVPSa9RaOx+e5hu8Spk2m/ve3tVzk+neblb9rvYCPX1Gun3b7y+zJd+Xr9xrwl3j/mx2MenMWPB68u7PRKuGjHMWnAXr7T/BRVo7jda7fbo1+bfmDaW0fxpXIdrU3c6y9te4LmjNJxyC7sGwe/aMDxYczPdMqfoXjc+0PndXniUwg8unEUeMYLAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAK+3/zU7RqGQJpvwAAAAASUVORK5CYII=" alt="Logo"
+     style="width:36px; height:36px; border-radius:8px; object-fit:cover;">
+    <div class="logo-text">Auto EDA Insight</div>
+  </a>
+
+  <div id="registerForm">
+    <h1>Buat Akun Baru</h1>
+    <p class="sub">Isi data di bawah untuk membuat akun Anda</p>
+
+    <div class="error-msg" id="errMsg">
+      <svg viewBox="0 0 24 24" style="width:16px;height:16px;stroke:#EF4444;fill:none;stroke-width:2;flex-shrink:0">
+        <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
+      </svg>
+      <span id="errText"></span>
+    </div>
+
+    <div class="form-group row2">
+      <div class="form-group" style="margin-bottom:0">
+        <label>Username <span class="req">● wajib</span></label>
+        <div class="input-wrap">
+          <input type="text" id="username" placeholder="budi123" oninput="validateUsername()" autocomplete="username">
+          <span class="input-icon" style="right:14px" id="icoUsername"></span>
+        </div>
+        <div class="field-hint" id="hintUsername">Min. 3 karakter (huruf & angka)</div>
+      </div>
+      <div class="form-group" style="margin-bottom:0">
+        <label>Nama Lengkap <span class="opt">(opsional)</span></label>
+        <input type="text" id="full_name" placeholder="Budi Santoso">
+      </div>
+    </div>
+
+    <div class="form-group" style="margin-top:14px">
+      <label>Email <span class="opt">(opsional)</span></label>
+      <div class="input-wrap">
+        <input type="email" id="email" placeholder="budi@email.com" oninput="validateEmail()">
+        <span class="input-icon" style="right:14px" id="icoEmail"></span>
+      </div>
+      <div class="field-hint" id="hintEmail">Boleh dikosongkan</div>
+    </div>
+
+    <div class="form-group">
+      <label>Password <span class="req">● wajib</span></label>
+      <div class="input-wrap">
+        <input type="password" id="password" placeholder="Min. 6 karakter" oninput="validatePassword()">
+        <span class="input-icon" id="icoPassword"></span>
+        <span class="toggle-pw" id="toggleP1" onclick="togglePassword('password','toggleP1')">Lihat</span>
+      </div>
+      <div class="strength-bar"><div class="strength-fill" id="strengthFill"></div></div>
+      <div class="field-hint" id="hintPassword">Masukkan password Anda</div>
+    </div>
+
+    <div class="form-group">
+      <label>Konfirmasi Password <span class="req">● wajib</span></label>
+      <div class="input-wrap">
+        <input type="password" id="password2" placeholder="Ulangi password" oninput="validateConfirm()">
+        <span class="input-icon" id="icoConfirm"></span>
+        <span class="toggle-pw" id="toggleP2" onclick="togglePassword('password2','toggleP2')">Lihat</span>
+      </div>
+      <div class="field-hint" id="hintConfirm">Ketik ulang password</div>
+    </div>
+
+    <button class="btn-submit" id="btnSubmit" onclick="openConfirm()" disabled>
+      Periksa &amp; Konfirmasi
+    </button>
+
+    <div class="divider">Sudah punya akun?</div>
+    <p style="text-align:center;font-size:.9rem">
+      <a class="link" href="/login">Masuk di sini</a>
+    </p>
+  </div>
+
+  <div class="success-screen" id="successScreen">
+    <div class="big-check">
+      <svg viewBox="0 0 24 24" style="width:36px;height:36px;stroke:#059669;fill:none;stroke-width:2.5">
+        <polyline points="20 6 9 17 4 12"/>
+      </svg>
+    </div>
+    <h2>Akun Berhasil Dibuat!</h2>
+    <p>Selamat, registrasi Anda telah sukses diproses.<br>Mengalihkan Anda ke halaman masuk otomatis...</p>
+    <div class="progress-bar"><div class="progress-fill"></div></div>
+  </div>
+</div>
+
+<script>
+// Floating particles
+const container = document.getElementById('particles');
+const colors = ['rgba(14,165,233,0.5)','rgba(6,182,212,0.4)','rgba(99,102,241,0.35)','rgba(245,158,11,0.3)','rgba(255,255,255,0.55)'];
+for (let i = 0; i < 18; i++) {
+  const p = document.createElement('div');
+  p.className = 'particle';
+  const size = Math.random() * 5 + 3;
+  const color = colors[Math.floor(Math.random() * colors.length)];
+  p.style.cssText = `
+    width:${size}px; height:${size}px;
+    background:${color};
+    left:${Math.random() * 100}%;
+    animation-duration:${Math.random() * 12 + 8}s;
+    animation-delay:-${Math.random() * 12}s;
+    box-shadow: 0 0 ${size * 2}px ${color};
+  `;
+  container.appendChild(p);
+}
+
+// ── State management ──────────────────────────────────────────────────────────
+const state = { username: false, password: false, confirm: false };
+
+function checkSubmit() {
+  document.getElementById('btnSubmit').disabled = !(state.username && state.password && state.confirm);
+}
+
+// ── Validation Helpers ────────────────────────────────────────────────────────
+function setField(id, icoId, hintId, valid, msg) {
+  const el = document.getElementById(id);
+  const ico = document.getElementById(icoId);
+  const hint = document.getElementById(hintId);
+  el.classList.toggle('valid', valid);
+  el.classList.toggle('invalid', !valid && msg !== '');
+  ico.textContent = msg === '' ? '' : valid ? '✓' : '×';
+  ico.style.color = msg === '' ? '' : valid ? '#059669' : '#EF4444';
+  hint.textContent = msg;
+  hint.className = 'field-hint' + (msg === '' ? '' : valid ? ' ok' : ' err');
+}
+
+// ── Field Validations ─────────────────────────────────────────────────────────
+function validateUsername() {
+  const v = document.getElementById('username').value.trim();
+  if (!v) { setField('username','icoUsername','hintUsername',false,''); state.username=false; checkSubmit(); return; }
+  if (v.length < 3) { setField('username','icoUsername','hintUsername',false,'Minimal 3 karakter'); state.username=false; checkSubmit(); return; }
+  if (!/^[a-zA-Z0-9_]+$/.test(v)) { setField('username','icoUsername','hintUsername',false,'Hanya huruf, angka, dan underscore'); state.username=false; checkSubmit(); return; }
+  setField('username','icoUsername','hintUsername',true,'Username tersedia');
+  state.username = true; checkSubmit();
+}
+
+function validateEmail() {
+  const v = document.getElementById('email').value.trim();
+  if (!v) { setField('email','icoEmail','hintEmail',true,'Boleh dikosongkan'); return; }
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v)) { setField('email','icoEmail','hintEmail',false,'Format email tidak valid'); return; }
+  setField('email','icoEmail','hintEmail',true,'Format email valid');
+}
+
+function validatePassword() {
+  const v = document.getElementById('password').value;
+  const fill = document.getElementById('strengthFill');
+  if (!v) { setField('password','icoPassword','hintPassword',false,''); fill.style.width='0'; fill.style.background=''; state.password=false; checkSubmit(); return; }
+
+  let score = 0;
+  if (v.length >= 6) score++;
+  if (v.length >= 10) score++;
+  if (/[A-Z]/.test(v) || /[0-9]/.test(v)) score++;
+  if (/[^A-Za-z0-9]/.test(v)) score++;
+
+  const labels = ['','Lemah','Sedang','Kuat','Sangat Kuat'];
+  const colors = ['','#EF4444','#F59E0B','#10B981','#059669'];
+  const widths = ['0%','25%','50%','75%','100%'];
+  fill.style.width = widths[score];
+  fill.style.background = colors[score];
+
+  if (v.length < 6) { setField('password','icoPassword','hintPassword',false,'Password minimal 6 karakter'); state.password=false; }
+  else { setField('password','icoPassword','hintPassword',true,`Kekuatan: ${labels[score]}`); state.password=true; }
+  checkSubmit();
+  if (document.getElementById('password2').value) validateConfirm();
+}
+
+function validateConfirm() {
+  const p1 = document.getElementById('password').value;
+  const p2 = document.getElementById('password2').value;
+  if (!p2) { setField('password2','icoConfirm','hintConfirm',false,''); state.confirm=false; checkSubmit(); return; }
+  if (p1 !== p2) { setField('password2','icoConfirm','hintConfirm',false,'Password tidak cocok'); state.confirm=false; }
+  else { setField('password2','icoConfirm','hintConfirm',true,'Password cocok ✓'); state.confirm=true; }
+  checkSubmit();
+}
+
+function togglePassword(inputId, toggleId) {
+  const input = document.getElementById(inputId);
+  const toggle = document.getElementById(toggleId);
+  if (input.type === 'password') {
+    input.type = 'text';
+    toggle.textContent = 'Sembunyikan';
+    toggle.style.color = '#0EA5E9';
+  } else {
+    input.type = 'password';
+    toggle.textContent = 'Lihat';
+    toggle.style.color = '';
+  }
+}
+
+// ── Modal & Confirmation ──────────────────────────────────────────────────────
+function openConfirm() {
+  validateUsername(); validatePassword(); validateConfirm();
+  if (!state.username || !state.password || !state.confirm) return;
+
+  const username  = document.getElementById('username').value.trim().toLowerCase();
+  const full_name = document.getElementById('full_name').value.trim();
+  const email     = document.getElementById('email').value.trim();
+  const p1Val     = document.getElementById('password').value;
+
+  document.getElementById('cfmUsername').textContent = username;
+  document.getElementById('cfmName').textContent     = full_name || '(tidak diisi)';
+  document.getElementById('cfmEmail').textContent    = email || '(tidak diisi)';
+
+  const isShowing = document.getElementById('password').type === 'text';
+  document.getElementById('cfmPwVisible').textContent = isShowing ? p1Val : '••••••••';
+
+  document.getElementById('errMsg').classList.remove('show');
+  document.getElementById('confirmModal').classList.add('show');
+}
+
+function closeModal() {
+  document.getElementById('confirmModal').classList.remove('show');
+}
+
+document.getElementById('confirmModal').addEventListener('click', function(e) {
+  if (e.target === this) closeModal();
+});
+
+// ── Final Submit ──────────────────────────────────────────────────────────────
+async function submitRegister() {
+  const btn = document.getElementById('btnConfirm');
+  btn.disabled = true; btn.textContent = 'Mendaftarkan...';
+
+  const payload = {
+    username:  document.getElementById('username').value.trim().toLowerCase(),
+    password:  document.getElementById('password').value,
+    full_name: document.getElementById('full_name').value.trim(),
+    email:     document.getElementById('email').value.trim(),
+  };
+
+  try {
+    const res = await fetch('/api/auth/register', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+    const data = await res.json();
+
+    if (data.success) {
+      closeModal();
+      document.getElementById('registerForm').style.display = 'none';
+      document.getElementById('successScreen').style.display = 'block';
+      setTimeout(() => window.location.href = '/login', 2200);
+    } else {
+      closeModal();
+      document.getElementById('errText').textContent = data.error;
+      document.getElementById('errMsg').classList.add('show');
+      btn.disabled = false; btn.textContent = 'Daftar Sekarang';
+    }
+  } catch(e) {
+    closeModal();
+    document.getElementById('errText').textContent = 'Koneksi gagal, coba lagi.';
+    document.getElementById('errMsg').classList.add('show');
+    btn.disabled = false; btn.textContent = 'Daftar Sekarang';
+  }
+}
+</script>
+<script src="/static/js/theme.js"></script>
+</body>
+</html>

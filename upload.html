@@ -1,0 +1,388 @@
+<!DOCTYPE html>
+<html lang="id" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Upload Data — Auto EDA Insight</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=Syne:wght@700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/static/css/theme.css">
+
+<script>
+  (function(){
+    try{var t=localStorage.getItem('eda-theme');if(t)document.documentElement.setAttribute('data-theme',t);}catch(_){}
+  }());
+</script>
+
+<style>
+  *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+
+  body {
+    background:  var(--color-bg);
+    color:       var(--color-text-primary);
+    font-family: 'Space Grotesk', sans-serif;
+    min-height:  100vh;
+    transition:  background .25s, color .25s;
+  }
+
+  /* ── Ambient background ────────────────────────────────── */
+  .bg-mesh {
+    position: fixed; inset: 0; z-index: 0; pointer-events: none;
+    background:
+      radial-gradient(ellipse 80% 50% at 20% 20%, var(--color-mesh-a) 0%, transparent 60%),
+      radial-gradient(ellipse 60% 60% at 80% 80%, var(--color-mesh-b) 0%, transparent 60%),
+      var(--color-bg);
+    transition: background .25s;
+  }
+  .grid-overlay {
+    position: fixed; inset: 0; z-index: 0; pointer-events: none;
+    background-image:
+      linear-gradient(var(--color-grid) 1px, transparent 1px),
+      linear-gradient(90deg, var(--color-grid) 1px, transparent 1px);
+    background-size: 60px 60px;
+  }
+
+  /* ── Navigation ────────────────────────────────────────── */
+  nav {
+    position:        relative;
+    z-index:         10;
+    display:         flex;
+    align-items:     center;
+    justify-content: space-between;
+    padding:         18px 40px;
+    border-bottom:   1px solid var(--color-border-soft);
+    backdrop-filter: blur(10px);
+    background:      var(--color-bg-glass);
+    transition:      background .25s, border-color .25s;
+  }
+  .nav-logo { display: flex; align-items: center; gap: 10px; text-decoration: none; }
+  .nav-icon {
+    width:         36px; height: 36px;
+    background:    linear-gradient(135deg, var(--color-accent), var(--color-accent-dark));
+    border-radius: 9px;
+    display:       flex; align-items: center; justify-content: center;
+  }
+  .nav-icon svg { width: 18px; height: 18px; stroke: white; fill: none; stroke-width: 2; }
+  .nav-brand { font-family: 'Syne', sans-serif; font-weight: 800; color: var(--color-accent); font-size: 1.1rem; }
+
+  .nav-links { display: flex; gap: 8px; align-items: center; }
+  .nav-link {
+    color:           var(--color-text-secondary);
+    text-decoration: none;
+    font-size:       .88rem;
+    padding:         7px 14px;
+    border-radius:   8px;
+    transition:      background .2s, color .2s;
+  }
+  .nav-link:hover, .nav-link.active {
+    background: var(--color-accent-soft);
+    color:      var(--color-accent);
+  }
+  .btn-logout {
+    background:    var(--color-danger-bg);
+    border:        1px solid var(--color-danger-border);
+    color:         var(--color-danger-text);
+    padding:       7px 16px;
+    border-radius: 8px;
+    font-size:     .85rem;
+    cursor:        pointer;
+    font-family:   'Space Grotesk', sans-serif;
+    transition:    background .2s;
+  }
+  .btn-logout:hover { background: var(--color-danger-border); }
+
+  /* ── Main wrap ─────────────────────────────────────────── */
+  .wrap {
+    position:        relative;
+    z-index:         1;
+    display:         flex;
+    flex-direction:  column;
+    align-items:     center;
+    justify-content: center;
+    padding:         60px 20px;
+  }
+
+  /* ── Upload card ───────────────────────────────────────── */
+  .upload-card {
+    background:    var(--color-bg-card);
+    border:        1px solid var(--color-border);
+    border-radius: 20px;
+    padding:       48px 40px;
+    max-width:     560px;
+    width:         100%;
+    text-align:    center;
+    box-shadow:    var(--shadow-sm);
+    transition:    background .25s, border-color .25s, box-shadow .25s;
+  }
+  [data-theme="light"] .upload-card {
+    background: var(--color-bg-surface);
+    box-shadow: var(--shadow-md);
+  }
+
+  .upload-card h1 {
+    font-size:     1.9rem;
+    color:         var(--color-accent);
+    margin-bottom: 8px;
+    font-family:   'Syne', sans-serif;
+  }
+  .upload-card > p {
+    color:         var(--color-text-secondary2);
+    margin-bottom: 32px;
+    font-size:     .95rem;
+  }
+  [data-theme="light"] .upload-card > p { color: var(--color-text-secondary); }
+
+  /* ── Drop zone ─────────────────────────────────────────── */
+  .drop-zone {
+    border:        2px dashed var(--color-border);
+    border-radius: 14px;
+    padding:       44px 20px;
+    cursor:        pointer;
+    transition:    border-color .3s, background .3s;
+    position:      relative;
+  }
+  .drop-zone:hover, .drop-zone.drag-over {
+    border-color: var(--color-accent);
+    background:   var(--color-accent-soft);
+  }
+  .drop-zone .icon svg {
+    width:        48px; height: 48px;
+    stroke:       var(--color-accent);
+    fill:         none;
+    stroke-width: 1.5;
+    opacity:      .8;
+  }
+  .drop-zone .main-txt {
+    margin-top: 14px;
+    color:      var(--color-text-secondary);
+    font-size:  .95rem;
+  }
+  .drop-zone .main-txt span { color: var(--color-accent); font-weight: 600; }
+
+  /* ── Format badges ─────────────────────────────────────── */
+  .formats { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; margin-top: 16px; }
+  .fmt-badge {
+    background:    var(--color-accent-soft);
+    border:        1px solid var(--color-accent-border-soft);
+    border-radius: 20px;
+    padding:       4px 12px;
+    font-size:     .78rem;
+    color:         var(--color-accent);
+    transition:    background .2s, border-color .2s;
+  }
+  .fmt-badge.json {
+    background:    var(--color-warning-bg);
+    border-color:  var(--color-warning-border);
+    color:         var(--color-warning);
+  }
+
+  input[type=file] { display: none; }
+
+  /* ── Info box ──────────────────────────────────────────── */
+  .info-box {
+    margin-top: 20px;
+    font-size:  .88rem;
+    color:      var(--color-text-muted);
+    min-height: 22px;
+    transition: color .2s;
+  }
+  .info-box.success { color: var(--color-success); }
+  .info-box.error   { color: var(--color-danger);  }
+
+  /* ── Upload button ─────────────────────────────────────── */
+  .btn-upload {
+    display:       inline-flex;
+    align-items:   center;
+    gap:           8px;
+    margin-top:    22px;
+    padding:       13px 36px;
+    background:    linear-gradient(135deg, var(--color-accent), var(--color-accent-dark));
+    border:        none;
+    border-radius: 10px;
+    color:         #fff;
+    font-weight:   700;
+    font-size:     1rem;
+    cursor:        pointer;
+    font-family:   'Space Grotesk', sans-serif;
+    transition:    opacity .3s, transform .3s, box-shadow .3s;
+    box-shadow:    0 2px 12px var(--color-accent-glow);
+  }
+  .btn-upload:hover {
+    opacity:    .9;
+    transform:  translateY(-2px);
+    box-shadow: 0 4px 20px var(--color-accent-glow);
+  }
+  .btn-upload:disabled { opacity: .45; cursor: not-allowed; transform: none; }
+  .btn-upload svg { width: 18px; height: 18px; stroke: white; fill: none; stroke-width: 2; }
+
+  /* ── Tips card ─────────────────────────────────────────── */
+  .tips {
+    margin-top:    28px;
+    background:    var(--color-accent-softer);
+    border:        1px solid var(--color-border-soft);
+    border-radius: 12px;
+    padding:       18px 20px;
+    text-align:    left;
+    transition:    background .25s, border-color .25s;
+  }
+  [data-theme="light"] .tips {
+    background: var(--color-bg-raised);
+    border-color: var(--color-border);
+  }
+  .tips h4 { color: var(--color-accent); font-size: .9rem; margin-bottom: 10px; }
+  .tips ul  { padding-left: 18px; color: var(--color-text-muted); font-size: .83rem; line-height: 1.8; }
+  .tips ul b { color: var(--color-text-secondary); }
+
+  /* ── Responsive ────────────────────────────────────────── */
+  @media (max-width: 600px) {
+    nav           { padding: 14px 20px; }
+    .upload-card  { padding: 32px 24px; }
+    .drop-zone    { padding: 32px 16px; }
+  }
+</style>
+</head>
+<body>
+<div class="bg-mesh"></div>
+<div class="grid-overlay"></div>
+
+<nav>
+  <a class="nav-logo" href="/">
+    <div class="nav-icon">
+      <svg viewBox="0 0 24 24"><path d="M3 3v18h18"/><path d="M7 16l4-4 4 4 4-8"/></svg>
+    </div>
+    <span class="nav-brand">Auto EDA Insight</span>
+  </a>
+  <div class="nav-links" id="navLinks">
+    <a class="nav-link" href="/dashboard">Dashboard</a>
+    <a class="nav-link active" href="/upload">Upload</a>
+    <a class="nav-link" href="/report">Report</a>
+    <a class="nav-link" href="/profile">Profil</a>
+
+    <!-- Theme Toggle -->
+    <button class="theme-toggle" id="themeToggleBtn" title="Toggle Light/Dark Mode" aria-label="Toggle theme">
+      <svg class="icon-moon" viewBox="0 0 24 24"><path d="M21 12.79A9 9 0 1 1 11.21 3a7 7 0 0 0 9.79 9.79z"/></svg>
+      <svg class="icon-sun"  viewBox="0 0 24 24"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
+    </button>
+
+    <button class="btn-logout" onclick="logout()">Keluar</button>
+  </div>
+</nav>
+
+<div class="wrap">
+  <div class="upload-card">
+    <h1>Upload Dataset</h1>
+    <p>Unggah file data Anda untuk memulai analisis EDA otomatis</p>
+
+    <div class="drop-zone" id="dropZone" onclick="document.getElementById('fileInput').click()">
+      <div class="icon">
+        <svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+      </div>
+      <p class="main-txt">Drag &amp; drop file di sini atau <span>klik untuk memilih</span></p>
+      <div class="formats">
+        <span class="fmt-badge">.xlsx</span>
+        <span class="fmt-badge">.xls</span>
+        <span class="fmt-badge">.csv</span>
+        <span class="fmt-badge">.txt</span>
+        <span class="fmt-badge json">.json</span>
+      </div>
+    </div>
+    <input type="file" id="fileInput" accept=".xlsx,.xls,.csv,.txt,.json" onchange="handleFile(this)">
+
+    <div class="info-box" id="fileInfo">Belum ada file dipilih</div>
+    <button class="btn-upload" id="btnUpload" style="display:none" onclick="uploadFile()">
+      <svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+      Mulai Analisis
+    </button>
+
+    <div class="tips">
+      <h4>Format yang Didukung</h4>
+      <ul>
+        <li><b>.xlsx / .xls</b> — Microsoft Excel</li>
+        <li><b>.csv</b> — Comma / semicolon / tab separated</li>
+        <li><b>.json</b> — Array of objects atau object of arrays</li>
+        <li><b>.txt</b> — Tab-separated atau delimiter lainnya</li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+<script src="/static/js/theme.js"></script>
+<script>
+  // Auth check
+  fetch('/api/auth/me').then(r => r.json()).then(d => {
+    if (!d.logged_in) window.location.href = '/login';
+  });
+
+  // Theme toggle
+  // Theme toggle handled by theme.js (bound via .theme-toggle class)
+
+  const dropZone  = document.getElementById('dropZone');
+  const fileInput = document.getElementById('fileInput');
+  const fileInfo  = document.getElementById('fileInfo');
+  const btnUpload = document.getElementById('btnUpload');
+  let selectedFile = null;
+
+  dropZone.addEventListener('dragover',  e => { e.preventDefault(); dropZone.classList.add('drag-over'); });
+  dropZone.addEventListener('dragleave', ()  => dropZone.classList.remove('drag-over'));
+  dropZone.addEventListener('drop', e => {
+    e.preventDefault();
+    dropZone.classList.remove('drag-over');
+    const file = e.dataTransfer.files[0];
+    if (file) setFile(file);
+  });
+
+  function handleFile(input) { if (input.files[0]) setFile(input.files[0]); }
+
+  function setFile(file) {
+    const allowed = ['.xlsx', '.xls', '.csv', '.txt', '.json'];
+    const ext     = '.' + file.name.split('.').pop().toLowerCase();
+    if (!allowed.includes(ext)) {
+      fileInfo.textContent  = `Format ${ext} tidak didukung.`;
+      fileInfo.className    = 'info-box error';
+      btnUpload.style.display = 'none';
+      return;
+    }
+    selectedFile          = file;
+    const kb              = (file.size / 1024).toFixed(1);
+    fileInfo.innerHTML    = `<b>${file.name}</b> &nbsp;|&nbsp; ${kb} KB`;
+    fileInfo.className    = 'info-box success';
+    btnUpload.style.display = 'inline-flex';
+  }
+
+  async function uploadFile() {
+    if (!selectedFile) return;
+    btnUpload.innerHTML  = '<svg viewBox="0 0 24 24" style="width:18px;height:18px;stroke:white;fill:none;stroke-width:2;animation:spin .8s linear infinite"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg> Mengupload...';
+    btnUpload.disabled   = true;
+    const fd             = new FormData();
+    fd.append('file', selectedFile);
+    try {
+      const res  = await fetch('/api/upload', { method: 'POST', body: fd });
+      const data = await res.json();
+      if (data.success) {
+        window.location.href = '/dashboard';
+      } else {
+        fileInfo.innerHTML  = `Error: ${data.error}`;
+        fileInfo.className  = 'info-box error';
+        btnUpload.innerHTML = '<svg viewBox="0 0 24 24" style="width:18px;height:18px;stroke:white;fill:none;stroke-width:2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg> Mulai Analisis';
+        btnUpload.disabled  = false;
+      }
+    } catch (err) {
+      fileInfo.innerHTML  = `Koneksi gagal: ${err.message}`;
+      fileInfo.className  = 'info-box error';
+      btnUpload.innerHTML = '<svg viewBox="0 0 24 24" style="width:18px;height:18px;stroke:white;fill:none;stroke-width:2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg> Mulai Analisis';
+      btnUpload.disabled  = false;
+    }
+  }
+
+  async function logout() {
+    await fetch('/api/auth/logout', { method: 'POST' });
+    window.location.href = '/login';
+  }
+
+  /* spinner keyframe (used in upload btn) */
+  const styleEl = document.createElement('style');
+  styleEl.textContent = '@keyframes spin { to { transform: rotate(360deg); } }';
+  document.head.appendChild(styleEl);
+</script>
+</body>
+</html>
